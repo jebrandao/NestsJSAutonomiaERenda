@@ -9,6 +9,8 @@
     "processar-log": "node processar-log.js",
     "servidor-instavel": "node servidor-instavel.js",
     "servidor-imortal": "node servidor-imortal.js",
+    "config-insegura": "node config-insegura.js",
+    "verificar-config": "node verificar-configuracao.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,6 +18,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "dotenv": "^17.4.2",
     "express": "^5.2.1"
   }
 }
