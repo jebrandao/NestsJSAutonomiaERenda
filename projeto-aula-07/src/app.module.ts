@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConvidadosController } from './convidados/convidados.controller';
@@ -7,10 +7,17 @@ import { LivrosController } from './livros/livros.controller';
 import { LivrosService } from './livros/livros.service';
 import { MediaController } from './media/media.controller';
 import { SegurancaController } from './seguranca/seguranca.controller';
+import { AdminController } from './admin/admin.controller';
+import { LoggerMiddleware } from './logger/logger.middleware';
 
 @Module({
   imports: [],
-  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController],
+  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController],
   providers: [AppService, ConvidadosService, LivrosService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Aplicado a todas as rotas da aplicação, como pede a atividade.
+    consumer.apply(LoggerMiddleware).forRoutes('*');
+  }
+}
