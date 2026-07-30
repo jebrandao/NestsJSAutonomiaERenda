@@ -6,10 +6,11 @@ import { ConvidadosService } from './convidados/convidados.service';
 import { LivrosController } from './livros/livros.controller';
 import { LivrosService } from './livros/livros.service';
 import { MediaController } from './media/media.controller';
+import { SegurancaController } from './seguranca/seguranca.controller';
 
 @Module({
   imports: [],
-  controllers: [AppController, ConvidadosController, LivrosController, MediaController],
+  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController],
   providers: [AppService, ConvidadosService, LivrosService],
 })
 export class AppModule {}
