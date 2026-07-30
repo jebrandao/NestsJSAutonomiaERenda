@@ -1,0 +1,10 @@
+{
+  "name": "serverless-aula14",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aula 14 - Serverless Functions e Edge Runtime: função de exemplo (hora + localização) e simulador local para medir TTFB.",
+  "type": "module",
+  "scripts": {
+    "start": "node local-server.js"
+  }
+}
