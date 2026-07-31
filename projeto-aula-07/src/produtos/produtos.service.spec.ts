@@ -17,6 +17,12 @@ describe('ProdutosService', () => {
     expect(service).toBeDefined();
   });
 
+  it('create deve adicionar um novo produto com ID gerado', () => {
+    const novo = service.create({ nome: 'Monitor', preco: 900 });
+    expect(novo).toEqual({ id: 4, nome: 'Monitor', preco: 900 });
+    expect(service.findOne('4')).toEqual(novo);
+  });
+
   it('findOne deve retornar o produto correspondente ao ID', () => {
     expect(service.findOne('1')).toEqual({ id: 1, nome: 'Notebook', preco: 3500 });
   });

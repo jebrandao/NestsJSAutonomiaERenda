@@ -19,6 +19,14 @@ describe('ProdutosController', () => {
     expect(controller).toBeDefined();
   });
 
+  it('criar deve adicionar um novo produto', () => {
+    expect(controller.criar({ nome: 'Monitor', preco: 900 })).toEqual({
+      id: 4,
+      nome: 'Monitor',
+      preco: 900,
+    });
+  });
+
   it('buscarPorId deve retornar o produto 1', () => {
     expect(controller.buscarPorId('1')).toEqual({ id: 1, nome: 'Notebook', preco: 3500 });
   });

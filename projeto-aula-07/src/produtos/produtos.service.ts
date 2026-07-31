@@ -1,14 +1,23 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Produto } from './interfaces/produto.interface';
+import { CreateProdutoDto } from './dto/create-produto.dto';
 
 @Injectable()
 export class ProdutosService {
   // Aula 15: acervo simulado em memória - Atividade Prática "O Sistema Anti-Falhas".
-  private readonly produtos: Produto[] = [
+  private produtos: Produto[] = [
     { id: 1, nome: 'Notebook', preco: 3500 },
     { id: 2, nome: 'Mouse', preco: 80 },
     { id: 3, nome: 'Teclado', preco: 150 },
   ];
+  private proximoId = 4;
+
+  // Aula 17: usado pela Atividade Prática para demonstrar POST documentado no Swagger.
+  create(createProdutoDto: CreateProdutoDto): Produto {
+    const novoProduto: Produto = { id: this.proximoId++, ...createProdutoDto };
+    this.produtos.push(novoProduto);
+    return novoProduto;
+  }
 
   findOne(idParam: string): Produto {
     // Erro 1: o ID informado na rota não é um número inteiro.
