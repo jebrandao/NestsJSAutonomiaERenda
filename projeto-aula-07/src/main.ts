@@ -1,7 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { join } from 'path';
+import mongoose from 'mongoose';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -21,6 +23,20 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
+
+  // Aula 18: Atividade Prática - "Cofre de Conexão".
+  const configService = app.get(ConfigService);
+  const databaseUrl = configService.get<string>('DATABASE_URL');
+
+  // "A Prova de Fogo": confirma que a variável foi carregada do .env (só para teste).
+  console.log('DATABASE_URL carregada do .env:', databaseUrl);
+
+  try {
+    await mongoose.connect(databaseUrl as string, { serverSelectionTimeoutMS: 3000 });
+    console.log('Conectado ao MongoDB com sucesso!');
+  } catch (error) {
+    console.error('Falha ao conectar ao MongoDB:', (error as Error).message);
+  }
 
   await app.listen(process.env.PORT ?? 3000);
 }

@@ -1,4 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConvidadosController } from './convidados/convidados.controller';
@@ -14,7 +15,10 @@ import { ProdutosService } from './produtos/produtos.service';
 import { ColaboradoresController } from './colaboradores/colaboradores.controller';
 
 @Module({
-  imports: [],
+  imports: [
+    // Aula 18: variáveis de ambiente disponíveis em toda a aplicação.
+    ConfigModule.forRoot({ isGlobal: true }),
+  ],
   controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController, ProdutosController, ColaboradoresController],
   providers: [AppService, ConvidadosService, LivrosService, ProdutosService],
 })
