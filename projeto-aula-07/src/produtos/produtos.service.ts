@@ -3,7 +3,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Produto as ProdutoLegado } from './interfaces/produto.interface';
 import { CreateProdutoDto } from './dto/create-produto.dto';
+import { FiltrosProdutoDto } from './dto/filtros-produto.dto';
 import { Produto } from './schemas/produto.schema';
+
+const ITENS_POR_PAGINA = 5;
 
 @Injectable()
 export class ProdutosService {
@@ -39,6 +42,32 @@ export class ProdutosService {
       }
       throw error;
     }
+  }
+
+  // Aula 22: Atividade Prática - "O Catálogo Inteligente".
+  // Busca com filtro por categoria, ordenação por preço e paginação fixa de
+  // 5 itens por página. select('-__v') garante que o campo de versão do
+  // Mongoose não vaze na resposta.
+  async findAll(filtros: FiltrosProdutoDto) {
+    const pagina = Number(filtros.pagina) > 0 ? Number(filtros.pagina) : 1;
+    const skip = (pagina - 1) * ITENS_POR_PAGINA;
+
+    const query: { categoria?: string } = {};
+    if (filtros.categoria) {
+      query.categoria = filtros.categoria;
+    }
+
+    const sort: Record<string, 1 | -1> = {};
+    if (filtros.ordenar === 'preco_asc') sort.preco = 1;
+    if (filtros.ordenar === 'preco_desc') sort.preco = -1;
+
+    return this.produtoModel
+      .find(query)
+      .select('-__v')
+      .sort(sort)
+      .skip(skip)
+      .limit(ITENS_POR_PAGINA)
+      .exec();
   }
 
   findOne(idParam: string): ProdutoLegado {

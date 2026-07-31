@@ -4,12 +4,22 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { ProdutosService } from './produtos.service';
 import { Produto } from './schemas/produto.schema';
 
+function criarQueryChainMock(resultadoFinal: unknown) {
+  const chain: Record<string, jest.Mock> = {};
+  chain.select = jest.fn().mockReturnValue(chain);
+  chain.sort = jest.fn().mockReturnValue(chain);
+  chain.skip = jest.fn().mockReturnValue(chain);
+  chain.limit = jest.fn().mockReturnValue(chain);
+  chain.exec = jest.fn().mockResolvedValue(resultadoFinal);
+  return chain;
+}
+
 describe('ProdutosService', () => {
   let service: ProdutosService;
-  let produtoModel: { create: jest.Mock };
+  let produtoModel: { create: jest.Mock; find: jest.Mock };
 
   beforeEach(async () => {
-    produtoModel = { create: jest.fn() };
+    produtoModel = { create: jest.fn(), find: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -55,6 +65,31 @@ describe('ProdutosService', () => {
     await expect(service.create(dto)).rejects.toThrow(
       new BadRequestException('Preço deve ser maior ou igual a 0'),
     );
+  });
+
+  it('findAll deve aplicar filtro de categoria, ordenação e paginação (página 1)', async () => {
+    const chain = criarQueryChainMock([{ nome: 'Luva' }, { nome: 'Óculos' }]);
+    produtoModel.find.mockReturnValue(chain);
+
+    const resultado = await service.findAll({ categoria: 'EPI', ordenar: 'preco_asc', pagina: '1' });
+
+    expect(produtoModel.find).toHaveBeenCalledWith({ categoria: 'EPI' });
+    expect(chain.select).toHaveBeenCalledWith('-__v');
+    expect(chain.sort).toHaveBeenCalledWith({ preco: 1 });
+    expect(chain.skip).toHaveBeenCalledWith(0);
+    expect(chain.limit).toHaveBeenCalledWith(5);
+    expect(resultado).toEqual([{ nome: 'Luva' }, { nome: 'Óculos' }]);
+  });
+
+  it('findAll deve calcular o skip corretamente para a página 2 (itens 6 a 10)', async () => {
+    const chain = criarQueryChainMock([]);
+    produtoModel.find.mockReturnValue(chain);
+
+    await service.findAll({ pagina: '2' });
+
+    expect(produtoModel.find).toHaveBeenCalledWith({});
+    expect(chain.skip).toHaveBeenCalledWith(5);
+    expect(chain.limit).toHaveBeenCalledWith(5);
   });
 
   it('findOne deve retornar o produto correspondente ao ID', () => {

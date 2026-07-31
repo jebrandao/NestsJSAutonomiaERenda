@@ -5,10 +5,10 @@ import { ProdutosService } from './produtos.service';
 
 describe('ProdutosController', () => {
   let controller: ProdutosController;
-  let produtosService: { create: jest.Mock; findOne: jest.Mock };
+  let produtosService: { create: jest.Mock; findAll: jest.Mock; findOne: jest.Mock };
 
   beforeEach(async () => {
-    produtosService = { create: jest.fn(), findOne: jest.fn() };
+    produtosService = { create: jest.fn(), findAll: jest.fn(), findOne: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProdutosController],
@@ -29,6 +29,15 @@ describe('ProdutosController', () => {
 
     await expect(controller.criar(dto)).resolves.toEqual(criado);
     expect(produtosService.create).toHaveBeenCalledWith(dto);
+  });
+
+  it('findAll deve delegar os filtros ao service', async () => {
+    const filtros = { categoria: 'EPI', ordenar: 'preco_asc' as const, pagina: '2' };
+    const pagina = [{ nome: 'Furadeira' }, { nome: 'Teclado' }];
+    produtosService.findAll.mockResolvedValue(pagina);
+
+    await expect(controller.findAll(filtros)).resolves.toEqual(pagina);
+    expect(produtosService.findAll).toHaveBeenCalledWith(filtros);
   });
 
   it('buscarPorId deve delegar ao service', () => {
