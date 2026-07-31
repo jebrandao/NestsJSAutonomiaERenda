@@ -12,6 +12,8 @@ export class ProdutosController {
   @Post()
   @ApiOperation({ summary: 'Cria um novo produto' })
   @ApiResponse({ status: 201, description: 'Produto criado com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos para o Schema do MongoDB.' })
+  @ApiResponse({ status: 409, description: 'Já existe um produto com este nome.' })
   criar(@Body() createProdutoDto: CreateProdutoDto) {
     return this.produtosService.create(createProdutoDto);
   }

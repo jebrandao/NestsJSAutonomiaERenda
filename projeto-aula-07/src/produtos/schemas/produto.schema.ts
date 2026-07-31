@@ -4,7 +4,9 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 // Contrato de dados do Produto persistido no MongoDB via Mongoose.
 @Schema({ timestamps: true })
 export class Produto {
-  @Prop({ required: true, trim: true })
+  // Aula 21: unique: true adicionado para o "Desafio de Resiliência" —
+  // impede duas gravações com o mesmo nome (erro 11000 do MongoDB).
+  @Prop({ required: true, trim: true, unique: true })
   nome: string;
 
   @Prop({ required: true, min: 0 })

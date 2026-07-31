@@ -5,11 +5,14 @@ import { ProdutosService } from './produtos.service';
 
 describe('ProdutosController', () => {
   let controller: ProdutosController;
+  let produtosService: { create: jest.Mock; findOne: jest.Mock };
 
   beforeEach(async () => {
+    produtosService = { create: jest.fn(), findOne: jest.fn() };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProdutosController],
-      providers: [ProdutosService],
+      providers: [{ provide: ProdutosService, useValue: produtosService }],
     }).compile();
 
     controller = module.get<ProdutosController>(ProdutosController);
@@ -19,23 +22,35 @@ describe('ProdutosController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('criar deve adicionar um novo produto', () => {
-    expect(controller.criar({ nome: 'Monitor', preco: 900 })).toEqual({
-      id: 4,
-      nome: 'Monitor',
-      preco: 900,
+  it('criar deve delegar ao service e retornar o produto criado', async () => {
+    const dto = { nome: 'Torno CNC X200', preco: 15000, categoria: 'Ferramentas' };
+    const criado = { _id: 'abc123', ...dto };
+    produtosService.create.mockResolvedValue(criado);
+
+    await expect(controller.criar(dto)).resolves.toEqual(criado);
+    expect(produtosService.create).toHaveBeenCalledWith(dto);
+  });
+
+  it('buscarPorId deve delegar ao service', () => {
+    const produto = { id: 1, nome: 'Notebook', preco: 3500 };
+    produtosService.findOne.mockReturnValue(produto);
+
+    expect(controller.buscarPorId('1')).toEqual(produto);
+  });
+
+  it('buscarPorId deve propagar BadRequestException para ID não numérico', () => {
+    produtosService.findOne.mockImplementation(() => {
+      throw new BadRequestException('O ID fornecido deve ser do tipo inteiro');
     });
-  });
 
-  it('buscarPorId deve retornar o produto 1', () => {
-    expect(controller.buscarPorId('1')).toEqual({ id: 1, nome: 'Notebook', preco: 3500 });
-  });
-
-  it('buscarPorId deve lançar BadRequestException para ID não numérico', () => {
     expect(() => controller.buscarPorId('abc')).toThrow(BadRequestException);
   });
 
-  it('buscarPorId deve lançar NotFoundException para ID inexistente', () => {
+  it('buscarPorId deve propagar NotFoundException para ID inexistente', () => {
+    produtosService.findOne.mockImplementation(() => {
+      throw new NotFoundException('Produto com ID 999 não encontrado');
+    });
+
     expect(() => controller.buscarPorId('999')).toThrow(NotFoundException);
   });
 });
