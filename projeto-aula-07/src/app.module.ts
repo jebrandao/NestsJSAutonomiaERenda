@@ -15,6 +15,7 @@ import { LoggerMiddleware } from './logger/logger.middleware';
 import { ProdutosController } from './produtos/produtos.controller';
 import { ProdutosService } from './produtos/produtos.service';
 import { ColaboradoresController } from './colaboradores/colaboradores.controller';
+import { Produto, ProdutoSchema } from './produtos/schemas/produto.schema';
 
 @Module({
   imports: [
@@ -48,6 +49,8 @@ import { ColaboradoresController } from './colaboradores/colaboradores.controlle
       }),
       inject: [ConfigService],
     }),
+    // Aula 20: registra o Schema/Model de Produto no escopo da aplicação.
+    MongooseModule.forFeature([{ name: Produto.name, schema: ProdutoSchema }]),
   ],
   controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController, ProdutosController, ColaboradoresController],
   providers: [AppService, ConvidadosService, LivrosService, ProdutosService],
