@@ -9,11 +9,13 @@ import { MediaController } from './media/media.controller';
 import { SegurancaController } from './seguranca/seguranca.controller';
 import { AdminController } from './admin/admin.controller';
 import { LoggerMiddleware } from './logger/logger.middleware';
+import { ProdutosController } from './produtos/produtos.controller';
+import { ProdutosService } from './produtos/produtos.service';
 
 @Module({
   imports: [],
-  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController],
-  providers: [AppService, ConvidadosService, LivrosService],
+  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController, ProdutosController],
+  providers: [AppService, ConvidadosService, LivrosService, ProdutosService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
