@@ -1,6 +1,6 @@
 # backend-nestjs
 
-Backend do curso de Codificação para Back-End (SENAI-CRTI), construído em aulas sucessivas até chegar em NestJS.
+Backend do curso Autonomia e Renda, construído em aulas sucessivas até chegar em NestJS.
 
 ## Configuração
 
