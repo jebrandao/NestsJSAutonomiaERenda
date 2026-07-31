@@ -1,5 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import type { Connection } from 'mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConvidadosController } from './convidados/convidados.controller';
@@ -18,6 +20,34 @@ import { ColaboradoresController } from './colaboradores/colaboradores.controlle
   imports: [
     // Aula 18: variáveis de ambiente disponíveis em toda a aplicação.
     ConfigModule.forRoot({ isGlobal: true }),
+    // Aula 19: conexão com o MongoDB gerenciada pelo Nest (substitui o
+    // mongoose.connect() manual chamado antes diretamente em main.ts).
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>('DATABASE_URL'),
+        // Sem isso, cada tentativa demora até 30s (padrão do driver) e o
+        // @nestjs/mongoose ainda tenta de novo 9 vezes por padrão — o erro
+        // levaria minutos para aparecer no terminal. 3s deixa o retry rápido.
+        serverSelectionTimeoutMS: 3000,
+        // O @nestjs/mongoose cria a conexão com mongoose.createConnection(),
+        // uma instância isolada — os eventos NÃO disparam em mongoose.connection
+        // (a conexão global). onConnectionCreate dá acesso à conexão real usada.
+        onConnectionCreate: (connection: Connection) => {
+          connection.on('connected', () => {
+            console.log('Mongoose conectado ao MongoDB com sucesso!');
+          });
+          connection.on('error', (error: Error) => {
+            console.error('Erro na conexão do Mongoose:', error.message);
+          });
+          connection.on('disconnected', () => {
+            console.warn('Mongoose desconectado do MongoDB.');
+          });
+          return connection;
+        },
+      }),
+      inject: [ConfigService],
+    }),
   ],
   controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController, ProdutosController, ColaboradoresController],
   providers: [AppService, ConvidadosService, LivrosService, ProdutosService],
