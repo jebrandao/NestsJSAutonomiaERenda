@@ -11,10 +11,11 @@ import { AdminController } from './admin/admin.controller';
 import { LoggerMiddleware } from './logger/logger.middleware';
 import { ProdutosController } from './produtos/produtos.controller';
 import { ProdutosService } from './produtos/produtos.service';
+import { ColaboradoresController } from './colaboradores/colaboradores.controller';
 
 @Module({
   imports: [],
-  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController, ProdutosController],
+  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController, ProdutosController, ColaboradoresController],
   providers: [AppService, ConvidadosService, LivrosService, ProdutosService],
 })
 export class AppModule implements NestModule {
