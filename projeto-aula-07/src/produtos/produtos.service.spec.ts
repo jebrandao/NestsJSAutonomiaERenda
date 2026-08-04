@@ -21,6 +21,7 @@ describe('ProdutosService', () => {
     find: jest.Mock;
     findById: jest.Mock;
     findByIdAndUpdate: jest.Mock;
+    findByIdAndDelete: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -29,6 +30,7 @@ describe('ProdutosService', () => {
       find: jest.fn(),
       findById: jest.fn(),
       findByIdAndUpdate: jest.fn(),
+      findByIdAndDelete: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -172,5 +174,34 @@ describe('ProdutosService', () => {
 
     expect(consoleSpy).not.toHaveBeenCalledWith('Atenção: Estoque Crítico');
     consoleSpy.mockRestore();
+  });
+
+  it('delete deve remover o produto quando o estoque estiver zerado', async () => {
+    const produtoSemEstoque = { _id: 'abc123', nome: 'Torno CNC X200', estoque: 0 };
+    produtoModel.findById.mockReturnValue({ select: jest.fn().mockResolvedValue(produtoSemEstoque) });
+    produtoModel.findByIdAndDelete.mockResolvedValue(produtoSemEstoque);
+
+    await service.delete('abc123');
+
+    expect(produtoModel.findByIdAndDelete).toHaveBeenCalledWith('abc123');
+  });
+
+  it('delete deve lançar BadRequestException quando o produto ainda tem estoque', async () => {
+    const produtoComEstoque = { _id: 'abc123', nome: 'Torno CNC X200', estoque: 5 };
+    produtoModel.findById.mockReturnValue({ select: jest.fn().mockResolvedValue(produtoComEstoque) });
+
+    await expect(service.delete('abc123')).rejects.toThrow(
+      new BadRequestException('Não é possível excluir produtos com itens em estoque'),
+    );
+    expect(produtoModel.findByIdAndDelete).not.toHaveBeenCalled();
+  });
+
+  it('delete deve lançar NotFoundException para ID inexistente (via findOne)', async () => {
+    produtoModel.findById.mockReturnValue({ select: jest.fn().mockResolvedValue(null) });
+
+    await expect(service.delete('64f0000000000000000000ab')).rejects.toThrow(
+      new NotFoundException('Produto com ID 64f0000000000000000000ab não encontrado'),
+    );
+    expect(produtoModel.findByIdAndDelete).not.toHaveBeenCalled();
   });
 });

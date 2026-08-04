@@ -116,4 +116,18 @@ export class ProdutosService {
 
     return produtoAtualizado;
   }
+
+  // Aula 24: Atividade Prática - "Limpeza Segura de Estoque".
+  // Reaproveita findOne() para validar existência do ID (404/400) e checar o
+  // estoque antes de decidir se a exclusão pode prosseguir.
+  async delete(id: string): Promise<void> {
+    const produto = await this.findOne(id);
+
+    // Regra de Segurança: nunca excluir produto com itens em estoque.
+    if (produto.estoque > 0) {
+      throw new BadRequestException('Não é possível excluir produtos com itens em estoque');
+    }
+
+    await this.produtoModel.findByIdAndDelete(id);
+  }
 }

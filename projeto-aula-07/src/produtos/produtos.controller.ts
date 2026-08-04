@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProdutosService } from './produtos.service';
 import { CreateProdutoDto } from './dto/create-produto.dto';
@@ -50,5 +61,16 @@ export class ProdutosController {
   @ApiResponse({ status: 409, description: 'Já existe um produto com este nome.' })
   atualizar(@Param('id') id: string, @Body() updateProdutoDto: UpdateProdutoDto) {
     return this.produtosService.update(id, updateProdutoDto);
+  }
+
+  // DELETE /produtos/:id
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Remove um produto (somente se o estoque estiver zerado)' })
+  @ApiResponse({ status: 204, description: 'Produto removido com sucesso.' })
+  @ApiResponse({ status: 400, description: 'ID inválido ou produto ainda possui itens em estoque.' })
+  @ApiResponse({ status: 404, description: 'Produto não encontrado.' })
+  async remover(@Param('id') id: string) {
+    await this.produtosService.delete(id);
   }
 }

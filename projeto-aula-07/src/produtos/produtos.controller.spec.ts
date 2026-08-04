@@ -10,6 +10,7 @@ describe('ProdutosController', () => {
     findAll: jest.Mock;
     findOne: jest.Mock;
     update: jest.Mock;
+    delete: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -18,6 +19,7 @@ describe('ProdutosController', () => {
       findAll: jest.fn(),
       findOne: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -90,5 +92,29 @@ describe('ProdutosController', () => {
     await expect(controller.atualizar('64f0000000000000000000ab', { preco: 100 })).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  it('remover deve delegar o ID ao service', async () => {
+    produtosService.delete.mockResolvedValue(undefined);
+
+    await controller.remover('abc123');
+
+    expect(produtosService.delete).toHaveBeenCalledWith('abc123');
+  });
+
+  it('remover deve propagar BadRequestException quando o produto ainda tem estoque', async () => {
+    produtosService.delete.mockRejectedValue(
+      new BadRequestException('Não é possível excluir produtos com itens em estoque'),
+    );
+
+    await expect(controller.remover('abc123')).rejects.toThrow(BadRequestException);
+  });
+
+  it('remover deve propagar NotFoundException para ID inexistente', async () => {
+    produtosService.delete.mockRejectedValue(
+      new NotFoundException('Produto com ID 64f0000000000000000000ab não encontrado'),
+    );
+
+    await expect(controller.remover('64f0000000000000000000ab')).rejects.toThrow(NotFoundException);
   });
 });
