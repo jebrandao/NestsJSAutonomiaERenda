@@ -1,4 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import * as mongoose from 'mongoose';
+import { Categoria } from '../../categorias/schemas/categoria.schema';
 
 // Aula 20: Atividade Prática - "Modelagem de Inventário Industrial".
 // Contrato de dados do Produto persistido no MongoDB via Mongoose.
@@ -12,11 +14,15 @@ export class Produto {
   @Prop({ required: true, min: 0 })
   preco: number;
 
+  // Aula 25: campo migrado de string/enum para referência real (ObjectId) a
+  // uma Categoria — antes um valor fixo, agora um relacionamento de verdade,
+  // recuperável com .populate('categoria').
   @Prop({
+    type: mongoose.Schema.Types.ObjectId,
+    ref: Categoria.name,
     required: true,
-    enum: ['Eletrônicos', 'Ferramentas', 'EPI'],
   })
-  categoria: string;
+  categoria: Categoria;
 
   @Prop({ default: 0, min: 0 })
   estoque: number;

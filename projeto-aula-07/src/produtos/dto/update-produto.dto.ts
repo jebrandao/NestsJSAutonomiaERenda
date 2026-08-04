@@ -12,7 +12,10 @@ export class UpdateProdutoDto {
   @ApiPropertyOptional({ example: 25.9 })
   preco?: number;
 
-  @ApiPropertyOptional({ enum: ['Eletrônicos', 'Ferramentas', 'EPI'] })
+  @ApiPropertyOptional({
+    example: '64f1a2b3c4d5e6f7a8b9c0d1',
+    description: 'ObjectId de uma Categoria existente',
+  })
   categoria?: string;
 
   @ApiPropertyOptional({ example: 3 })

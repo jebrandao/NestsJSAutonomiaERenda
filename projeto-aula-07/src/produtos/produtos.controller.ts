@@ -34,7 +34,7 @@ export class ProdutosController {
   // GET /produtos?categoria=EPI&ordenar=preco_asc&pagina=2
   @Get()
   @ApiOperation({ summary: 'Lista produtos com filtro, ordenação e paginação (5 por página)' })
-  @ApiQuery({ name: 'categoria', required: false, enum: ['Eletrônicos', 'Ferramentas', 'EPI'] })
+  @ApiQuery({ name: 'categoria', required: false, description: 'ObjectId de uma Categoria' })
   @ApiQuery({ name: 'ordenar', required: false, enum: ['preco_asc', 'preco_desc'] })
   @ApiQuery({ name: 'pagina', required: false, example: '1' })
   @ApiResponse({ status: 200, description: 'Lista de produtos (até 5 itens).' })

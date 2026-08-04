@@ -16,6 +16,9 @@ import { ProdutosController } from './produtos/produtos.controller';
 import { ProdutosService } from './produtos/produtos.service';
 import { ColaboradoresController } from './colaboradores/colaboradores.controller';
 import { Produto, ProdutoSchema } from './produtos/schemas/produto.schema';
+import { CategoriasController } from './categorias/categorias.controller';
+import { CategoriasService } from './categorias/categorias.service';
+import { Categoria, CategoriaSchema } from './categorias/schemas/categoria.schema';
 
 @Module({
   imports: [
@@ -51,9 +54,11 @@ import { Produto, ProdutoSchema } from './produtos/schemas/produto.schema';
     }),
     // Aula 20: registra o Schema/Model de Produto no escopo da aplicação.
     MongooseModule.forFeature([{ name: Produto.name, schema: ProdutoSchema }]),
+    // Aula 25: registra o Schema/Model de Categoria (relacionamento com Produto).
+    MongooseModule.forFeature([{ name: Categoria.name, schema: CategoriaSchema }]),
   ],
-  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController, ProdutosController, ColaboradoresController],
-  providers: [AppService, ConvidadosService, LivrosService, ProdutosService],
+  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController, ProdutosController, ColaboradoresController, CategoriasController],
+  providers: [AppService, ConvidadosService, LivrosService, ProdutosService, CategoriasService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

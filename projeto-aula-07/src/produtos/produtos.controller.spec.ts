@@ -35,7 +35,7 @@ describe('ProdutosController', () => {
   });
 
   it('criar deve delegar ao service e retornar o produto criado', async () => {
-    const dto = { nome: 'Torno CNC X200', preco: 15000, categoria: 'Ferramentas' };
+    const dto = { nome: 'Torno CNC X200', preco: 15000, categoria: 'cat123' };
     const criado = { _id: 'abc123', ...dto };
     produtosService.create.mockResolvedValue(criado);
 
@@ -44,7 +44,7 @@ describe('ProdutosController', () => {
   });
 
   it('findAll deve delegar os filtros ao service', async () => {
-    const filtros = { categoria: 'EPI', ordenar: 'preco_asc' as const, pagina: '2' };
+    const filtros = { categoria: 'cat123', ordenar: 'preco_asc' as const, pagina: '2' };
     const pagina = [{ nome: 'Furadeira' }, { nome: 'Teclado' }];
     produtosService.findAll.mockResolvedValue(pagina);
 
@@ -77,7 +77,7 @@ describe('ProdutosController', () => {
 
   it('atualizar deve delegar id e dto ao service e retornar o produto atualizado', async () => {
     const dto = { preco: 16000 };
-    const atualizado = { _id: 'abc123', nome: 'Torno CNC X200', preco: 16000, categoria: 'Ferramentas' };
+    const atualizado = { _id: 'abc123', nome: 'Torno CNC X200', preco: 16000, categoria: 'cat123' };
     produtosService.update.mockResolvedValue(atualizado);
 
     await expect(controller.atualizar('abc123', dto)).resolves.toEqual(atualizado);

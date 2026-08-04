@@ -17,11 +17,19 @@ export class ProdutosService {
   // Cadastro persistido de verdade no MongoDB via Mongoose.
   async create(createProdutoDto: CreateProdutoDto) {
     try {
-      return await this.produtoModel.create(createProdutoDto);
+      // Aula 25: Produto.categoria agora é tipado como Categoria (o objeto
+      // populado), mas o DTO de entrada envia o ObjectId como string — o
+      // Mongoose casta corretamente em runtime, mas o TypeScript não aceita
+      // esse formato "cru" no overload de .create(). Cast pontual e seguro.
+      return await this.produtoModel.create(createProdutoDto as unknown as Produto);
     } catch (error) {
       // Erro de duplicidade (nome: unique: true no Schema).
       if ((error as { code?: number }).code === 11000) {
         throw new ConflictException('Este equipamento já está registrado no sistema');
+      }
+      // Aula 25: categoria agora é ObjectId — um valor mal formado cai aqui.
+      if ((error as Error).name === 'CastError') {
+        throw new BadRequestException('O campo categoria deve ser o ObjectId de uma Categoria existente');
       }
       // Falha de validação do Schema (regras de negócio no banco, distintas
       // das já checadas pelo DTO/Zod na camada de entrada da API).
@@ -39,6 +47,9 @@ export class ProdutosService {
   // Busca com filtro por categoria, ordenação por preço e paginação fixa de
   // 5 itens por página. select('-__v') garante que o campo de versão do
   // Mongoose não vaze na resposta.
+  // Aula 25: populate('categoria', 'nome') é o "Desafio Extra" de população
+  // seletiva — a listagem traz só o nome da categoria (sem descricao), mais
+  // leve para uma tela de catálogo. findOne() traz o objeto completo.
   async findAll(filtros: FiltrosProdutoDto) {
     const pagina = Number(filtros.pagina) > 0 ? Number(filtros.pagina) : 1;
     const skip = (pagina - 1) * ITENS_POR_PAGINA;
@@ -52,22 +63,34 @@ export class ProdutosService {
     if (filtros.ordenar === 'preco_asc') sort.preco = 1;
     if (filtros.ordenar === 'preco_desc') sort.preco = -1;
 
-    return this.produtoModel
-      .find(query)
-      .select('-__v')
-      .sort(sort)
-      .skip(skip)
-      .limit(ITENS_POR_PAGINA)
-      .exec();
+    try {
+      // Mesmo motivo do cast em create(): o filtro usa o ObjectId como
+      // string, mas o overload de .find() espera o formato de Categoria.
+      return await this.produtoModel
+        .find(query as Record<string, unknown>)
+        .select('-__v')
+        .populate('categoria', 'nome')
+        .sort(sort)
+        .skip(skip)
+        .limit(ITENS_POR_PAGINA)
+        .exec();
+    } catch (error) {
+      if ((error as Error).name === 'CastError') {
+        throw new BadRequestException('O filtro categoria deve ser o ObjectId de uma Categoria existente');
+      }
+      throw error;
+    }
   }
 
   // Aula 23: findOne migrado do array em memória (Aula 15) para o MongoDB —
   // necessário porque o PATCH desta aula opera sobre o _id real do Mongo, e
   // não faria sentido ter duas "identidades" de produto diferentes na API.
+  // Aula 25: populate('categoria') traz o objeto completo da categoria em
+  // vez de só o ObjectId críptico.
   async findOne(id: string) {
     let produto: Produto | null;
     try {
-      produto = await this.produtoModel.findById(id).select('-__v');
+      produto = await this.produtoModel.findById(id).select('-__v').populate('categoria');
     } catch (error) {
       if ((error as Error).name === 'CastError') {
         throw new BadRequestException('O ID fornecido não é um ObjectId válido');
@@ -88,9 +111,16 @@ export class ProdutosService {
     try {
       produtoAtualizado = await this.produtoModel
         .findByIdAndUpdate(id, { $set: updateProdutoDto }, { returnDocument: 'after', runValidators: true })
-        .select('-__v');
+        .select('-__v')
+        .populate('categoria');
     } catch (error) {
       if ((error as Error).name === 'CastError') {
+        // Aula 25: o campo que falhou o cast pode ser o :id da rota OU o
+        // categoria enviado no corpo — cada um merece uma mensagem própria.
+        const campo = (error as { path?: string }).path;
+        if (campo === 'categoria') {
+          throw new BadRequestException('O campo categoria deve ser o ObjectId de uma Categoria existente');
+        }
         throw new BadRequestException('O ID fornecido não é um ObjectId válido');
       }
       if ((error as { code?: number }).code === 11000) {
