@@ -5,10 +5,20 @@ import { ProdutosService } from './produtos.service';
 
 describe('ProdutosController', () => {
   let controller: ProdutosController;
-  let produtosService: { create: jest.Mock; findAll: jest.Mock; findOne: jest.Mock };
+  let produtosService: {
+    create: jest.Mock;
+    findAll: jest.Mock;
+    findOne: jest.Mock;
+    update: jest.Mock;
+  };
 
   beforeEach(async () => {
-    produtosService = { create: jest.fn(), findAll: jest.fn(), findOne: jest.fn() };
+    produtosService = {
+      create: jest.fn(),
+      findAll: jest.fn(),
+      findOne: jest.fn(),
+      update: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProdutosController],
@@ -61,5 +71,24 @@ describe('ProdutosController', () => {
     });
 
     expect(() => controller.buscarPorId('999')).toThrow(NotFoundException);
+  });
+
+  it('atualizar deve delegar id e dto ao service e retornar o produto atualizado', async () => {
+    const dto = { preco: 16000 };
+    const atualizado = { _id: 'abc123', nome: 'Torno CNC X200', preco: 16000, categoria: 'Ferramentas' };
+    produtosService.update.mockResolvedValue(atualizado);
+
+    await expect(controller.atualizar('abc123', dto)).resolves.toEqual(atualizado);
+    expect(produtosService.update).toHaveBeenCalledWith('abc123', dto);
+  });
+
+  it('atualizar deve propagar NotFoundException para ID inexistente', async () => {
+    produtosService.update.mockRejectedValue(
+      new NotFoundException('Produto com ID 64f0000000000000000000ab não encontrado'),
+    );
+
+    await expect(controller.atualizar('64f0000000000000000000ab', { preco: 100 })).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });

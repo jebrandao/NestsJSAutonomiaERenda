@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProdutosService } from './produtos.service';
 import { CreateProdutoDto } from './dto/create-produto.dto';
 import { FiltrosProdutoDto } from './dto/filtros-produto.dto';
+import { UpdateProdutoDto } from './dto/update-produto.dto';
 
 @ApiTags('produtos')
 @Controller('produtos')
@@ -38,5 +39,16 @@ export class ProdutosController {
   @ApiResponse({ status: 404, description: 'Produto não encontrado.' })
   buscarPorId(@Param('id') id: string) {
     return this.produtosService.findOne(id);
+  }
+
+  // PATCH /produtos/:id
+  @Patch(':id')
+  @ApiOperation({ summary: 'Atualiza parcialmente um produto existente' })
+  @ApiResponse({ status: 200, description: 'Produto atualizado com sucesso.' })
+  @ApiResponse({ status: 400, description: 'ID ou dados inválidos.' })
+  @ApiResponse({ status: 404, description: 'Produto não encontrado.' })
+  @ApiResponse({ status: 409, description: 'Já existe um produto com este nome.' })
+  atualizar(@Param('id') id: string, @Body() updateProdutoDto: UpdateProdutoDto) {
+    return this.produtosService.update(id, updateProdutoDto);
   }
 }

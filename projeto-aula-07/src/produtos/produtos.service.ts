@@ -1,26 +1,17 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Produto as ProdutoLegado } from './interfaces/produto.interface';
 import { CreateProdutoDto } from './dto/create-produto.dto';
 import { FiltrosProdutoDto } from './dto/filtros-produto.dto';
+import { UpdateProdutoDto } from './dto/update-produto.dto';
 import { Produto } from './schemas/produto.schema';
 
 const ITENS_POR_PAGINA = 5;
+const ESTOQUE_CRITICO = 5;
 
 @Injectable()
 export class ProdutosService {
   constructor(@InjectModel(Produto.name) private readonly produtoModel: Model<Produto>) {}
-
-  // Aula 15: acervo simulado em memória, ainda usado por findOne() — a
-  // migração das buscas para o MongoDB (find/findById) é o assunto da
-  // próxima aula. Por enquanto, itens criados via create() (Mongo) não
-  // aparecem aqui; é uma inconsistência temporária esperada nesta fase.
-  private produtos: ProdutoLegado[] = [
-    { id: 1, nome: 'Notebook', preco: 3500 },
-    { id: 2, nome: 'Mouse', preco: 80 },
-    { id: 3, nome: 'Teclado', preco: 150 },
-  ];
 
   // Aula 21: Atividade Prática - "Cadastro de Maquinário Industrial".
   // Cadastro persistido de verdade no MongoDB via Mongoose.
@@ -70,20 +61,59 @@ export class ProdutosService {
       .exec();
   }
 
-  findOne(idParam: string): ProdutoLegado {
-    // Erro 1: o ID informado na rota não é um número inteiro.
-    if (!/^\d+$/.test(idParam)) {
-      throw new BadRequestException('O ID fornecido deve ser do tipo inteiro');
+  // Aula 23: findOne migrado do array em memória (Aula 15) para o MongoDB —
+  // necessário porque o PATCH desta aula opera sobre o _id real do Mongo, e
+  // não faria sentido ter duas "identidades" de produto diferentes na API.
+  async findOne(id: string) {
+    let produto: Produto | null;
+    try {
+      produto = await this.produtoModel.findById(id).select('-__v');
+    } catch (error) {
+      if ((error as Error).name === 'CastError') {
+        throw new BadRequestException('O ID fornecido não é um ObjectId válido');
+      }
+      throw error;
     }
 
-    const id = Number(idParam);
-    const produto = this.produtos.find((p) => p.id === id);
-
-    // Erro 2: o ID é um número válido, mas não existe nenhum produto com ele.
     if (!produto) {
       throw new NotFoundException(`Produto com ID ${id} não encontrado`);
     }
 
     return produto;
+  }
+
+  // Aula 23: Atividade Prática - "Atualização de Status Industrial".
+  async update(id: string, updateProdutoDto: UpdateProdutoDto) {
+    let produtoAtualizado: Produto | null;
+    try {
+      produtoAtualizado = await this.produtoModel
+        .findByIdAndUpdate(id, { $set: updateProdutoDto }, { returnDocument: 'after', runValidators: true })
+        .select('-__v');
+    } catch (error) {
+      if ((error as Error).name === 'CastError') {
+        throw new BadRequestException('O ID fornecido não é um ObjectId válido');
+      }
+      if ((error as { code?: number }).code === 11000) {
+        throw new ConflictException('Este equipamento já está registrado no sistema');
+      }
+      if ((error as Error).name === 'ValidationError') {
+        const mensagens = Object.values(
+          (error as unknown as { errors: Record<string, { message: string }> }).errors,
+        ).map((e) => e.message);
+        throw new BadRequestException(mensagens.join(', '));
+      }
+      throw error;
+    }
+
+    if (!produtoAtualizado) {
+      throw new NotFoundException(`Produto com ID ${id} não encontrado`);
+    }
+
+    // Regra de Negócio: Alerta de Estoque Crítico.
+    if (updateProdutoDto.estoque !== undefined && updateProdutoDto.estoque < ESTOQUE_CRITICO) {
+      console.log('Atenção: Estoque Crítico');
+    }
+
+    return produtoAtualizado;
   }
 }

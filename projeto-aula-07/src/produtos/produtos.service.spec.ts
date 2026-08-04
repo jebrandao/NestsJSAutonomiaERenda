@@ -16,10 +16,20 @@ function criarQueryChainMock(resultadoFinal: unknown) {
 
 describe('ProdutosService', () => {
   let service: ProdutosService;
-  let produtoModel: { create: jest.Mock; find: jest.Mock };
+  let produtoModel: {
+    create: jest.Mock;
+    find: jest.Mock;
+    findById: jest.Mock;
+    findByIdAndUpdate: jest.Mock;
+  };
 
   beforeEach(async () => {
-    produtoModel = { create: jest.fn(), find: jest.fn() };
+    produtoModel = {
+      create: jest.fn(),
+      find: jest.fn(),
+      findById: jest.fn(),
+      findByIdAndUpdate: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -92,19 +102,75 @@ describe('ProdutosService', () => {
     expect(chain.limit).toHaveBeenCalledWith(5);
   });
 
-  it('findOne deve retornar o produto correspondente ao ID', () => {
-    expect(service.findOne('1')).toEqual({ id: 1, nome: 'Notebook', preco: 3500 });
+  it('findOne deve retornar o produto encontrado pelo _id do Mongo', async () => {
+    const documento = { _id: 'abc123', nome: 'Torno CNC X200', preco: 15000, categoria: 'Ferramentas' };
+    produtoModel.findById.mockReturnValue({ select: jest.fn().mockResolvedValue(documento) });
+
+    const resultado = await service.findOne('abc123');
+
+    expect(produtoModel.findById).toHaveBeenCalledWith('abc123');
+    expect(resultado).toEqual(documento);
   });
 
-  it('findOne deve lançar BadRequestException com a mensagem exata para ID não numérico', () => {
-    expect(() => service.findOne('abc')).toThrow(
-      new BadRequestException('O ID fornecido deve ser do tipo inteiro'),
+  it('findOne deve lançar BadRequestException para ID mal formado (CastError)', async () => {
+    produtoModel.findById.mockReturnValue({
+      select: jest.fn().mockRejectedValue({ name: 'CastError' }),
+    });
+
+    await expect(service.findOne('abc')).rejects.toThrow(
+      new BadRequestException('O ID fornecido não é um ObjectId válido'),
     );
   });
 
-  it('findOne deve lançar NotFoundException para ID numérico inexistente', () => {
-    expect(() => service.findOne('999')).toThrow(
-      new NotFoundException('Produto com ID 999 não encontrado'),
+  it('findOne deve lançar NotFoundException para ID bem formado mas inexistente', async () => {
+    produtoModel.findById.mockReturnValue({ select: jest.fn().mockResolvedValue(null) });
+
+    await expect(service.findOne('64f0000000000000000000ab')).rejects.toThrow(
+      new NotFoundException('Produto com ID 64f0000000000000000000ab não encontrado'),
     );
+  });
+
+  it('update deve retornar o produto atualizado via findByIdAndUpdate', async () => {
+    const atualizado = { _id: 'abc123', nome: 'Torno CNC X200', preco: 16000, categoria: 'Ferramentas' };
+    produtoModel.findByIdAndUpdate.mockReturnValue({ select: jest.fn().mockResolvedValue(atualizado) });
+
+    const resultado = await service.update('abc123', { preco: 16000 });
+
+    expect(produtoModel.findByIdAndUpdate).toHaveBeenCalledWith(
+      'abc123',
+      { $set: { preco: 16000 } },
+      { returnDocument: 'after', runValidators: true },
+    );
+    expect(resultado).toEqual(atualizado);
+  });
+
+  it('update deve lançar NotFoundException quando o produto não existe', async () => {
+    produtoModel.findByIdAndUpdate.mockReturnValue({ select: jest.fn().mockResolvedValue(null) });
+
+    await expect(service.update('64f0000000000000000000ab', { preco: 100 })).rejects.toThrow(
+      new NotFoundException('Produto com ID 64f0000000000000000000ab não encontrado'),
+    );
+  });
+
+  it('update deve logar "Atenção: Estoque Crítico" quando estoque for atualizado para menos de 5', async () => {
+    const atualizado = { _id: 'abc123', estoque: 2 };
+    produtoModel.findByIdAndUpdate.mockReturnValue({ select: jest.fn().mockResolvedValue(atualizado) });
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    await service.update('abc123', { estoque: 2 });
+
+    expect(consoleSpy).toHaveBeenCalledWith('Atenção: Estoque Crítico');
+    consoleSpy.mockRestore();
+  });
+
+  it('update NÃO deve logar o alerta quando o estoque atualizado for 5 ou mais', async () => {
+    const atualizado = { _id: 'abc123', estoque: 10 };
+    produtoModel.findByIdAndUpdate.mockReturnValue({ select: jest.fn().mockResolvedValue(atualizado) });
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    await service.update('abc123', { estoque: 10 });
+
+    expect(consoleSpy).not.toHaveBeenCalledWith('Atenção: Estoque Crítico');
+    consoleSpy.mockRestore();
   });
 });
