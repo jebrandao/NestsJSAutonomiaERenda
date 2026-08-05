@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import * as bcrypt from 'bcrypt';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { Usuario } from './schemas/usuario.schema';
@@ -56,5 +57,25 @@ export class UsuariosService {
     await usuario.save();
 
     return this.findOne(id);
+  }
+
+  // Aula 29: Atividade Prática - "O Cofre de Identidades" (Verificação Extra).
+  // bcrypt.compare() é a única forma correta de validar a senha: ele aplica
+  // o mesmo hash à tentativa e compara os hashes — nunca descriptografa o
+  // hash salvo, porque isso é matematicamente impossível (hashing é
+  // unidirecional).
+  // Busca por email sem select('-senha'): aqui, ao contrário de
+  // findOne/findAll, o hash é exatamente o que a comparação precisa.
+  async validar(email: string, senha: string): Promise<string> {
+    const usuario = await this.usuarioModel.findOne({ email });
+
+    // Mesma resposta para "e-mail não existe" e "senha errada" — evita que
+    // a API revele quais e-mails estão cadastrados (enumeração de contas).
+    if (!usuario) {
+      return 'Senha Incorreta';
+    }
+
+    const senhaValida = await bcrypt.compare(senha, usuario.senha);
+    return senhaValida ? 'Acesso Permitido' : 'Senha Incorreta';
   }
 }

@@ -3,6 +3,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { ValidarUsuarioDto } from './dto/validar-usuario.dto';
 
 @ApiTags('usuarios')
 @Controller('usuarios')
@@ -63,5 +64,21 @@ export class UsuariosController {
     @Body() updateUsuarioDto: UpdateUsuarioDto,
   ) {
     return this.usuariosService.update(id, updateUsuarioDto);
+  }
+
+  // POST /usuarios/validar
+  @Post('validar')
+  @ApiOperation({
+    summary: 'Valida e-mail e senha via bcrypt.compare() (login)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '"Acesso Permitido" ou "Senha Incorreta".',
+  })
+  validar(@Body() validarUsuarioDto: ValidarUsuarioDto) {
+    return this.usuariosService.validar(
+      validarUsuarioDto.email,
+      validarUsuarioDto.senha,
+    );
   }
 }
