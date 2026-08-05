@@ -167,4 +167,47 @@ describe('UsuariosService', () => {
       expect(resultado).toBe('Senha Incorreta');
     });
   });
+
+  // Aula 30: base do AuthService.login() — precisa do documento do usuário
+  // (não só de um texto de sucesso/falha) para montar o payload do JWT.
+  describe('validarCredenciais', () => {
+    it('deve retornar o documento do usuário quando a senha bate com o hash salvo', async () => {
+      const hash = await bcrypt.hash('senai123', await bcrypt.genSalt(4));
+      const usuario = { _id: 'abc123', email: 'ana@empresa.com', senha: hash };
+      usuarioModel.findOne.mockResolvedValue(usuario);
+
+      const resultado = await service.validarCredenciais(
+        'ana@empresa.com',
+        'senai123',
+      );
+
+      expect(resultado).toEqual(usuario);
+    });
+
+    it('deve retornar null quando a senha não bate', async () => {
+      const hash = await bcrypt.hash('senai123', await bcrypt.genSalt(4));
+      usuarioModel.findOne.mockResolvedValue({
+        email: 'ana@empresa.com',
+        senha: hash,
+      });
+
+      const resultado = await service.validarCredenciais(
+        'ana@empresa.com',
+        'senhaErrada',
+      );
+
+      expect(resultado).toBeNull();
+    });
+
+    it('deve retornar null quando o e-mail não existe', async () => {
+      usuarioModel.findOne.mockResolvedValue(null);
+
+      const resultado = await service.validarCredenciais(
+        'naoexiste@empresa.com',
+        'qualquer',
+      );
+
+      expect(resultado).toBeNull();
+    });
+  });
 });

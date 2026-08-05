@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { JwtModule } from '@nestjs/jwt';
 import type { Connection } from 'mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -18,10 +19,15 @@ import { ColaboradoresController } from './colaboradores/colaboradores.controlle
 import { Produto, ProdutoSchema } from './produtos/schemas/produto.schema';
 import { CategoriasController } from './categorias/categorias.controller';
 import { CategoriasService } from './categorias/categorias.service';
-import { Categoria, CategoriaSchema } from './categorias/schemas/categoria.schema';
+import {
+  Categoria,
+  CategoriaSchema,
+} from './categorias/schemas/categoria.schema';
 import { UsuariosController } from './usuarios/usuarios.controller';
 import { UsuariosService } from './usuarios/usuarios.service';
 import { Usuario, UsuarioSchema } from './usuarios/schemas/usuario.schema';
+import { AuthController } from './auth/auth.controller';
+import { AuthService } from './auth/auth.service';
 
 @Module({
   imports: [
@@ -58,12 +64,44 @@ import { Usuario, UsuarioSchema } from './usuarios/schemas/usuario.schema';
     // Aula 20: registra o Schema/Model de Produto no escopo da aplicação.
     MongooseModule.forFeature([{ name: Produto.name, schema: ProdutoSchema }]),
     // Aula 25: registra o Schema/Model de Categoria (relacionamento com Produto).
-    MongooseModule.forFeature([{ name: Categoria.name, schema: CategoriaSchema }]),
+    MongooseModule.forFeature([
+      { name: Categoria.name, schema: CategoriaSchema },
+    ]),
     // Aula 26: registra o Schema/Model de Usuario (hook pre-save de bcrypt).
     MongooseModule.forFeature([{ name: Usuario.name, schema: UsuarioSchema }]),
+    // Aula 30: JWT_SECRET vem do .env via ConfigService, nunca hardcoded —
+    // mesmo padrão já usado para o DATABASE_URL (MongooseModule acima).
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1d' },
+      }),
+      inject: [ConfigService],
+    }),
   ],
-  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController, ProdutosController, ColaboradoresController, CategoriasController, UsuariosController],
-  providers: [AppService, ConvidadosService, LivrosService, ProdutosService, CategoriasService, UsuariosService],
+  controllers: [
+    AppController,
+    ConvidadosController,
+    LivrosController,
+    MediaController,
+    SegurancaController,
+    AdminController,
+    ProdutosController,
+    ColaboradoresController,
+    CategoriasController,
+    UsuariosController,
+    AuthController,
+  ],
+  providers: [
+    AppService,
+    ConvidadosService,
+    LivrosService,
+    ProdutosService,
+    CategoriasService,
+    UsuariosService,
+    AuthService,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
