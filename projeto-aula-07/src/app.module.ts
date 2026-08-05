@@ -19,6 +19,9 @@ import { Produto, ProdutoSchema } from './produtos/schemas/produto.schema';
 import { CategoriasController } from './categorias/categorias.controller';
 import { CategoriasService } from './categorias/categorias.service';
 import { Categoria, CategoriaSchema } from './categorias/schemas/categoria.schema';
+import { UsuariosController } from './usuarios/usuarios.controller';
+import { UsuariosService } from './usuarios/usuarios.service';
+import { Usuario, UsuarioSchema } from './usuarios/schemas/usuario.schema';
 
 @Module({
   imports: [
@@ -56,9 +59,11 @@ import { Categoria, CategoriaSchema } from './categorias/schemas/categoria.schem
     MongooseModule.forFeature([{ name: Produto.name, schema: ProdutoSchema }]),
     // Aula 25: registra o Schema/Model de Categoria (relacionamento com Produto).
     MongooseModule.forFeature([{ name: Categoria.name, schema: CategoriaSchema }]),
+    // Aula 26: registra o Schema/Model de Usuario (hook pre-save de bcrypt).
+    MongooseModule.forFeature([{ name: Usuario.name, schema: UsuarioSchema }]),
   ],
-  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController, ProdutosController, ColaboradoresController, CategoriasController],
-  providers: [AppService, ConvidadosService, LivrosService, ProdutosService, CategoriasService],
+  controllers: [AppController, ConvidadosController, LivrosController, MediaController, SegurancaController, AdminController, ProdutosController, ColaboradoresController, CategoriasController, UsuariosController],
+  providers: [AppService, ConvidadosService, LivrosService, ProdutosService, CategoriasService, UsuariosService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
