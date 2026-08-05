@@ -44,7 +44,11 @@ describe('ProdutosController', () => {
   });
 
   it('findAll deve delegar os filtros ao service', async () => {
-    const filtros = { categoria: 'cat123', ordenar: 'preco_asc' as const, pagina: '2' };
+    const filtros = {
+      categoria: 'cat123',
+      ordenar: 'preco_asc' as const,
+      pagina: '2',
+    };
     const pagina = [{ nome: 'Furadeira' }, { nome: 'Teclado' }];
     produtosService.findAll.mockResolvedValue(pagina);
 
@@ -77,21 +81,30 @@ describe('ProdutosController', () => {
 
   it('atualizar deve delegar id e dto ao service e retornar o produto atualizado', async () => {
     const dto = { preco: 16000 };
-    const atualizado = { _id: 'abc123', nome: 'Torno CNC X200', preco: 16000, categoria: 'cat123' };
+    const atualizado = {
+      _id: 'abc123',
+      nome: 'Torno CNC X200',
+      preco: 16000,
+      categoria: 'cat123',
+    };
     produtosService.update.mockResolvedValue(atualizado);
 
-    await expect(controller.atualizar('abc123', dto)).resolves.toEqual(atualizado);
+    await expect(controller.atualizar('abc123', dto)).resolves.toEqual(
+      atualizado,
+    );
     expect(produtosService.update).toHaveBeenCalledWith('abc123', dto);
   });
 
   it('atualizar deve propagar NotFoundException para ID inexistente', async () => {
     produtosService.update.mockRejectedValue(
-      new NotFoundException('Produto com ID 64f0000000000000000000ab não encontrado'),
+      new NotFoundException(
+        'Produto com ID 64f0000000000000000000ab não encontrado',
+      ),
     );
 
-    await expect(controller.atualizar('64f0000000000000000000ab', { preco: 100 })).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(
+      controller.atualizar('64f0000000000000000000ab', { preco: 100 }),
+    ).rejects.toThrow(NotFoundException);
   });
 
   it('remover deve delegar o ID ao service', async () => {
@@ -104,17 +117,25 @@ describe('ProdutosController', () => {
 
   it('remover deve propagar BadRequestException quando o produto ainda tem estoque', async () => {
     produtosService.delete.mockRejectedValue(
-      new BadRequestException('Não é possível excluir produtos com itens em estoque'),
+      new BadRequestException(
+        'Não é possível excluir produtos com itens em estoque',
+      ),
     );
 
-    await expect(controller.remover('abc123')).rejects.toThrow(BadRequestException);
+    await expect(controller.remover('abc123')).rejects.toThrow(
+      BadRequestException,
+    );
   });
 
   it('remover deve propagar NotFoundException para ID inexistente', async () => {
     produtosService.delete.mockRejectedValue(
-      new NotFoundException('Produto com ID 64f0000000000000000000ab não encontrado'),
+      new NotFoundException(
+        'Produto com ID 64f0000000000000000000ab não encontrado',
+      ),
     );
 
-    await expect(controller.remover('64f0000000000000000000ab')).rejects.toThrow(NotFoundException);
+    await expect(
+      controller.remover('64f0000000000000000000ab'),
+    ).rejects.toThrow(NotFoundException);
   });
 });

@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
@@ -19,25 +14,11 @@ export class UsuariosService {
   // Aula 26: Atividade Prática - "O Guardião de Acessos".
   // .create() aciona o pre('save') do Schema, que troca a senha em texto
   // puro pelo hash bcrypt antes de gravar no MongoDB.
+  // Aula 27: e-mail duplicado (E11000) e violação de Schema (ValidationError)
+  // não são mais capturados aqui — o MongoExceptionFilter global os traduz.
   async create(createUsuarioDto: CreateUsuarioDto) {
-    try {
-      const usuario = await this.usuarioModel.create(createUsuarioDto);
-      return this.findOne(String(usuario._id));
-    } catch (error) {
-      if ((error as { code?: number }).code === 11000) {
-        throw new ConflictException(
-          'Já existe um usuário cadastrado com este e-mail',
-        );
-      }
-      if ((error as Error).name === 'ValidationError') {
-        const mensagens = Object.values(
-          (error as unknown as { errors: Record<string, { message: string }> })
-            .errors,
-        ).map((e) => e.message);
-        throw new BadRequestException(mensagens.join(', '));
-      }
-      throw error;
-    }
+    const usuario = await this.usuarioModel.create(createUsuarioDto);
+    return this.findOne(String(usuario._id));
   }
 
   // select('-senha') garante que o hash nunca vaze pela API — a verificação
@@ -46,18 +27,10 @@ export class UsuariosService {
     return this.usuarioModel.find().select('-senha').exec();
   }
 
+  // Aula 27: um :id em formato inválido dispara CastError, capturado pelo
+  // MongoExceptionFilter global — não precisa mais de try/catch aqui.
   async findOne(id: string) {
-    let usuario: Usuario | null;
-    try {
-      usuario = await this.usuarioModel.findById(id).select('-senha');
-    } catch (error) {
-      if ((error as Error).name === 'CastError') {
-        throw new BadRequestException(
-          'O ID fornecido não é um ObjectId válido',
-        );
-      }
-      throw error;
-    }
+    const usuario = await this.usuarioModel.findById(id).select('-senha');
 
     if (!usuario) {
       throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
@@ -70,42 +43,17 @@ export class UsuariosService {
   // os middlewares de documento do Mongoose (incluindo o pre('save')), então
   // uma senha nova nunca seria criptografada. Com .save(), o hook roda
   // sempre, e o isModified('senha') decide se recriptografa ou não.
+  // Aula 27: CastError, E11000 e ValidationError deixaram de ter catch local
+  // pelo mesmo motivo do create().
   async update(id: string, updateUsuarioDto: UpdateUsuarioDto) {
-    let usuario: (Usuario & { save: () => Promise<Usuario> }) | null;
-    try {
-      usuario = await this.usuarioModel.findById(id);
-    } catch (error) {
-      if ((error as Error).name === 'CastError') {
-        throw new BadRequestException(
-          'O ID fornecido não é um ObjectId válido',
-        );
-      }
-      throw error;
-    }
+    const usuario = await this.usuarioModel.findById(id);
 
     if (!usuario) {
       throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
     }
 
     Object.assign(usuario, updateUsuarioDto);
-
-    try {
-      await usuario.save();
-    } catch (error) {
-      if ((error as { code?: number }).code === 11000) {
-        throw new ConflictException(
-          'Já existe um usuário cadastrado com este e-mail',
-        );
-      }
-      if ((error as Error).name === 'ValidationError') {
-        const mensagens = Object.values(
-          (error as unknown as { errors: Record<string, { message: string }> })
-            .errors,
-        ).map((e) => e.message);
-        throw new BadRequestException(mensagens.join(', '));
-      }
-      throw error;
-    }
+    await usuario.save();
 
     return this.findOne(id);
   }

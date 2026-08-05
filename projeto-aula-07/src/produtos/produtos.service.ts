@@ -1,4 +1,8 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateProdutoDto } from './dto/create-produto.dto';
@@ -11,36 +15,21 @@ const ESTOQUE_CRITICO = 5;
 
 @Injectable()
 export class ProdutosService {
-  constructor(@InjectModel(Produto.name) private readonly produtoModel: Model<Produto>) {}
+  constructor(
+    @InjectModel(Produto.name) private readonly produtoModel: Model<Produto>,
+  ) {}
 
   // Aula 21: Atividade Prática - "Cadastro de Maquinário Industrial".
   // Cadastro persistido de verdade no MongoDB via Mongoose.
+  // Aula 27: duplicidade (E11000), categoria mal formada (CastError) e
+  // violação de Schema (ValidationError) não são mais capturados aqui — o
+  // MongoExceptionFilter global os traduz para respostas de negócio.
   async create(createProdutoDto: CreateProdutoDto) {
-    try {
-      // Aula 25: Produto.categoria agora é tipado como Categoria (o objeto
-      // populado), mas o DTO de entrada envia o ObjectId como string — o
-      // Mongoose casta corretamente em runtime, mas o TypeScript não aceita
-      // esse formato "cru" no overload de .create(). Cast pontual e seguro.
-      return await this.produtoModel.create(createProdutoDto as unknown as Produto);
-    } catch (error) {
-      // Erro de duplicidade (nome: unique: true no Schema).
-      if ((error as { code?: number }).code === 11000) {
-        throw new ConflictException('Este equipamento já está registrado no sistema');
-      }
-      // Aula 25: categoria agora é ObjectId — um valor mal formado cai aqui.
-      if ((error as Error).name === 'CastError') {
-        throw new BadRequestException('O campo categoria deve ser o ObjectId de uma Categoria existente');
-      }
-      // Falha de validação do Schema (regras de negócio no banco, distintas
-      // das já checadas pelo DTO/Zod na camada de entrada da API).
-      if ((error as Error).name === 'ValidationError') {
-        const mensagens = Object.values(
-          (error as unknown as { errors: Record<string, { message: string }> }).errors,
-        ).map((e) => e.message);
-        throw new BadRequestException(mensagens.join(', '));
-      }
-      throw error;
-    }
+    // Aula 25: Produto.categoria agora é tipado como Categoria (o objeto
+    // populado), mas o DTO de entrada envia o ObjectId como string — o
+    // Mongoose casta corretamente em runtime, mas o TypeScript não aceita
+    // esse formato "cru" no overload de .create(). Cast pontual e seguro.
+    return this.produtoModel.create(createProdutoDto as unknown as Produto);
   }
 
   // Aula 22: Atividade Prática - "O Catálogo Inteligente".
@@ -63,23 +52,18 @@ export class ProdutosService {
     if (filtros.ordenar === 'preco_asc') sort.preco = 1;
     if (filtros.ordenar === 'preco_desc') sort.preco = -1;
 
-    try {
-      // Mesmo motivo do cast em create(): o filtro usa o ObjectId como
-      // string, mas o overload de .find() espera o formato de Categoria.
-      return await this.produtoModel
-        .find(query as Record<string, unknown>)
-        .select('-__v')
-        .populate('categoria', 'nome')
-        .sort(sort)
-        .skip(skip)
-        .limit(ITENS_POR_PAGINA)
-        .exec();
-    } catch (error) {
-      if ((error as Error).name === 'CastError') {
-        throw new BadRequestException('O filtro categoria deve ser o ObjectId de uma Categoria existente');
-      }
-      throw error;
-    }
+    // Mesmo motivo do cast em create(): o filtro usa o ObjectId como
+    // string, mas o overload de .find() espera o formato de Categoria.
+    // Aula 27: um filtro mal formado agora vira CastError capturado pelo
+    // MongoExceptionFilter global, não mais por um catch local.
+    return this.produtoModel
+      .find(query as Record<string, unknown>)
+      .select('-__v')
+      .populate('categoria', 'nome')
+      .sort(sort)
+      .skip(skip)
+      .limit(ITENS_POR_PAGINA)
+      .exec();
   }
 
   // Aula 23: findOne migrado do array em memória (Aula 15) para o MongoDB —
@@ -88,15 +72,12 @@ export class ProdutosService {
   // Aula 25: populate('categoria') traz o objeto completo da categoria em
   // vez de só o ObjectId críptico.
   async findOne(id: string) {
-    let produto: Produto | null;
-    try {
-      produto = await this.produtoModel.findById(id).select('-__v').populate('categoria');
-    } catch (error) {
-      if ((error as Error).name === 'CastError') {
-        throw new BadRequestException('O ID fornecido não é um ObjectId válido');
-      }
-      throw error;
-    }
+    // Aula 27: um :id em formato inválido dispara CastError, capturado pelo
+    // MongoExceptionFilter global — não precisa mais de try/catch aqui.
+    const produto = await this.produtoModel
+      .findById(id)
+      .select('-__v')
+      .populate('categoria');
 
     if (!produto) {
       throw new NotFoundException(`Produto com ID ${id} não encontrado`);
@@ -106,41 +87,30 @@ export class ProdutosService {
   }
 
   // Aula 23: Atividade Prática - "Atualização de Status Industrial".
+  // Aula 27: CastError (:id ou categoria inválidos), E11000 (nome duplicado)
+  // e ValidationError agora são responsabilidade do MongoExceptionFilter
+  // global — perde-se a mensagem específica por campo que o catch local
+  // dava ("categoria" vs ":id"), ganha-se um único ponto de tradução para
+  // toda a API, como pede a atividade.
   async update(id: string, updateProdutoDto: UpdateProdutoDto) {
-    let produtoAtualizado: Produto | null;
-    try {
-      produtoAtualizado = await this.produtoModel
-        .findByIdAndUpdate(id, { $set: updateProdutoDto }, { returnDocument: 'after', runValidators: true })
-        .select('-__v')
-        .populate('categoria');
-    } catch (error) {
-      if ((error as Error).name === 'CastError') {
-        // Aula 25: o campo que falhou o cast pode ser o :id da rota OU o
-        // categoria enviado no corpo — cada um merece uma mensagem própria.
-        const campo = (error as { path?: string }).path;
-        if (campo === 'categoria') {
-          throw new BadRequestException('O campo categoria deve ser o ObjectId de uma Categoria existente');
-        }
-        throw new BadRequestException('O ID fornecido não é um ObjectId válido');
-      }
-      if ((error as { code?: number }).code === 11000) {
-        throw new ConflictException('Este equipamento já está registrado no sistema');
-      }
-      if ((error as Error).name === 'ValidationError') {
-        const mensagens = Object.values(
-          (error as unknown as { errors: Record<string, { message: string }> }).errors,
-        ).map((e) => e.message);
-        throw new BadRequestException(mensagens.join(', '));
-      }
-      throw error;
-    }
+    const produtoAtualizado = await this.produtoModel
+      .findByIdAndUpdate(
+        id,
+        { $set: updateProdutoDto },
+        { returnDocument: 'after', runValidators: true },
+      )
+      .select('-__v')
+      .populate('categoria');
 
     if (!produtoAtualizado) {
       throw new NotFoundException(`Produto com ID ${id} não encontrado`);
     }
 
     // Regra de Negócio: Alerta de Estoque Crítico.
-    if (updateProdutoDto.estoque !== undefined && updateProdutoDto.estoque < ESTOQUE_CRITICO) {
+    if (
+      updateProdutoDto.estoque !== undefined &&
+      updateProdutoDto.estoque < ESTOQUE_CRITICO
+    ) {
       console.log('Atenção: Estoque Crítico');
     }
 
@@ -155,7 +125,9 @@ export class ProdutosService {
 
     // Regra de Segurança: nunca excluir produto com itens em estoque.
     if (produto.estoque > 0) {
-      throw new BadRequestException('Não é possível excluir produtos com itens em estoque');
+      throw new BadRequestException(
+        'Não é possível excluir produtos com itens em estoque',
+      );
     }
 
     await this.produtoModel.findByIdAndDelete(id);

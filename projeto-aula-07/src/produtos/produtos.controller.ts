@@ -25,17 +25,33 @@ export class ProdutosController {
   @Post()
   @ApiOperation({ summary: 'Cria um novo produto' })
   @ApiResponse({ status: 201, description: 'Produto criado com sucesso.' })
-  @ApiResponse({ status: 400, description: 'Dados inválidos para o Schema do MongoDB.' })
-  @ApiResponse({ status: 409, description: 'Já existe um produto com este nome.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Dados inválidos para o Schema do MongoDB.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Já existe um produto com este nome.',
+  })
   criar(@Body() createProdutoDto: CreateProdutoDto) {
     return this.produtosService.create(createProdutoDto);
   }
 
   // GET /produtos?categoria=EPI&ordenar=preco_asc&pagina=2
   @Get()
-  @ApiOperation({ summary: 'Lista produtos com filtro, ordenação e paginação (5 por página)' })
-  @ApiQuery({ name: 'categoria', required: false, description: 'ObjectId de uma Categoria' })
-  @ApiQuery({ name: 'ordenar', required: false, enum: ['preco_asc', 'preco_desc'] })
+  @ApiOperation({
+    summary: 'Lista produtos com filtro, ordenação e paginação (5 por página)',
+  })
+  @ApiQuery({
+    name: 'categoria',
+    required: false,
+    description: 'ObjectId de uma Categoria',
+  })
+  @ApiQuery({
+    name: 'ordenar',
+    required: false,
+    enum: ['preco_asc', 'preco_desc'],
+  })
   @ApiQuery({ name: 'pagina', required: false, example: '1' })
   @ApiResponse({ status: 200, description: 'Lista de produtos (até 5 itens).' })
   findAll(@Query() filtros: FiltrosProdutoDto) {
@@ -58,17 +74,28 @@ export class ProdutosController {
   @ApiResponse({ status: 200, description: 'Produto atualizado com sucesso.' })
   @ApiResponse({ status: 400, description: 'ID ou dados inválidos.' })
   @ApiResponse({ status: 404, description: 'Produto não encontrado.' })
-  @ApiResponse({ status: 409, description: 'Já existe um produto com este nome.' })
-  atualizar(@Param('id') id: string, @Body() updateProdutoDto: UpdateProdutoDto) {
+  @ApiResponse({
+    status: 409,
+    description: 'Já existe um produto com este nome.',
+  })
+  atualizar(
+    @Param('id') id: string,
+    @Body() updateProdutoDto: UpdateProdutoDto,
+  ) {
     return this.produtosService.update(id, updateProdutoDto);
   }
 
   // DELETE /produtos/:id
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Remove um produto (somente se o estoque estiver zerado)' })
+  @ApiOperation({
+    summary: 'Remove um produto (somente se o estoque estiver zerado)',
+  })
   @ApiResponse({ status: 204, description: 'Produto removido com sucesso.' })
-  @ApiResponse({ status: 400, description: 'ID inválido ou produto ainda possui itens em estoque.' })
+  @ApiResponse({
+    status: 400,
+    description: 'ID inválido ou produto ainda possui itens em estoque.',
+  })
   @ApiResponse({ status: 404, description: 'Produto não encontrado.' })
   async remover(@Param('id') id: string) {
     await this.produtosService.delete(id);

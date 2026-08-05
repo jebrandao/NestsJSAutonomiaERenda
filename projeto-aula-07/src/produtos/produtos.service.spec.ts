@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProdutosService } from './produtos.service';
 import { Produto } from './schemas/produto.schema';
 
@@ -68,41 +68,45 @@ describe('ProdutosService', () => {
     expect(resultado).toEqual(documentoCriado);
   });
 
-  it('create deve lançar ConflictException quando o nome já existe (erro 11000)', async () => {
+  // Aula 27: create() não trata mais erros de banco — o erro bruto do
+  // Mongoose/MongoDB deve subir intacto para o MongoExceptionFilter global
+  // traduzir (ver common/filters/mongo-exception.filter.spec.ts).
+  it('create deve propagar o erro bruto quando o nome já existe (erro 11000)', async () => {
     const dto = { nome: 'Torno CNC X200', preco: 15000, categoria: 'cat123' };
-    produtoModel.create.mockRejectedValue({ code: 11000 });
+    const erroBruto = { code: 11000 };
+    produtoModel.create.mockRejectedValue(erroBruto);
 
-    await expect(service.create(dto)).rejects.toThrow(
-      new ConflictException('Este equipamento já está registrado no sistema'),
-    );
+    await expect(service.create(dto)).rejects.toBe(erroBruto);
   });
 
-  it('create deve lançar BadRequestException quando categoria não é um ObjectId válido (CastError)', async () => {
+  it('create deve propagar o erro bruto quando categoria não é um ObjectId válido (CastError)', async () => {
     const dto = { nome: 'X', preco: 10, categoria: 'nao-e-um-objectid' };
-    produtoModel.create.mockRejectedValue({ name: 'CastError', path: 'categoria' });
+    const erroBruto = { name: 'CastError', path: 'categoria' };
+    produtoModel.create.mockRejectedValue(erroBruto);
 
-    await expect(service.create(dto)).rejects.toThrow(
-      new BadRequestException('O campo categoria deve ser o ObjectId de uma Categoria existente'),
-    );
+    await expect(service.create(dto)).rejects.toBe(erroBruto);
   });
 
-  it('create deve lançar BadRequestException para ValidationError do Mongoose', async () => {
+  it('create deve propagar o erro bruto de ValidationError do Mongoose', async () => {
     const dto = { nome: 'X', preco: -1, categoria: 'cat123' };
-    produtoModel.create.mockRejectedValue({
+    const erroBruto = {
       name: 'ValidationError',
       errors: { preco: { message: 'Preço deve ser maior ou igual a 0' } },
-    });
+    };
+    produtoModel.create.mockRejectedValue(erroBruto);
 
-    await expect(service.create(dto)).rejects.toThrow(
-      new BadRequestException('Preço deve ser maior ou igual a 0'),
-    );
+    await expect(service.create(dto)).rejects.toBe(erroBruto);
   });
 
   it('findAll deve aplicar filtro de categoria, população seletiva, ordenação e paginação (página 1)', async () => {
     const chain = criarQueryChainMock([{ nome: 'Luva' }, { nome: 'Óculos' }]);
     produtoModel.find.mockReturnValue(chain);
 
-    const resultado = await service.findAll({ categoria: 'cat123', ordenar: 'preco_asc', pagina: '1' });
+    const resultado = await service.findAll({
+      categoria: 'cat123',
+      ordenar: 'preco_asc',
+      pagina: '1',
+    });
 
     expect(produtoModel.find).toHaveBeenCalledWith({ categoria: 'cat123' });
     expect(chain.select).toHaveBeenCalledWith('-__v');
@@ -124,13 +128,14 @@ describe('ProdutosService', () => {
     expect(chain.limit).toHaveBeenCalledWith(5);
   });
 
-  it('findAll deve lançar BadRequestException quando o filtro categoria não é um ObjectId válido', async () => {
+  it('findAll deve propagar o erro bruto quando o filtro categoria não é um ObjectId válido', async () => {
     const chain = criarQueryChainMock(null);
-    chain.exec = jest.fn().mockRejectedValue({ name: 'CastError' });
+    const erroBruto = { name: 'CastError' };
+    chain.exec = jest.fn().mockRejectedValue(erroBruto);
     produtoModel.find.mockReturnValue(chain);
 
-    await expect(service.findAll({ categoria: 'invalido' })).rejects.toThrow(
-      new BadRequestException('O filtro categoria deve ser o ObjectId de uma Categoria existente'),
+    await expect(service.findAll({ categoria: 'invalido' })).rejects.toBe(
+      erroBruto,
     );
   });
 
@@ -139,7 +144,11 @@ describe('ProdutosService', () => {
       _id: 'abc123',
       nome: 'Torno CNC X200',
       preco: 15000,
-      categoria: { _id: 'cat123', nome: 'Ferramentas Manuais', descricao: 'Sem motor.' },
+      categoria: {
+        _id: 'cat123',
+        nome: 'Ferramentas Manuais',
+        descricao: 'Sem motor.',
+      },
     };
     produtoModel.findById.mockReturnValue(criarSelectPopulateMock(documento));
 
@@ -149,19 +158,22 @@ describe('ProdutosService', () => {
     expect(resultado).toEqual(documento);
   });
 
-  it('findOne deve lançar BadRequestException para ID mal formado (CastError)', async () => {
-    produtoModel.findById.mockReturnValue(criarSelectPopulateMock({ name: 'CastError' }, true));
-
-    await expect(service.findOne('abc')).rejects.toThrow(
-      new BadRequestException('O ID fornecido não é um ObjectId válido'),
+  it('findOne deve propagar o erro bruto para ID mal formado (CastError)', async () => {
+    const erroBruto = { name: 'CastError' };
+    produtoModel.findById.mockReturnValue(
+      criarSelectPopulateMock(erroBruto, true),
     );
+
+    await expect(service.findOne('abc')).rejects.toBe(erroBruto);
   });
 
   it('findOne deve lançar NotFoundException para ID bem formado mas inexistente', async () => {
     produtoModel.findById.mockReturnValue(criarSelectPopulateMock(null));
 
     await expect(service.findOne('64f0000000000000000000ab')).rejects.toThrow(
-      new NotFoundException('Produto com ID 64f0000000000000000000ab não encontrado'),
+      new NotFoundException(
+        'Produto com ID 64f0000000000000000000ab não encontrado',
+      ),
     );
   });
 
@@ -172,7 +184,9 @@ describe('ProdutosService', () => {
       preco: 16000,
       categoria: { _id: 'cat123', nome: 'Ferramentas Manuais' },
     };
-    produtoModel.findByIdAndUpdate.mockReturnValue(criarSelectPopulateMock(atualizado));
+    produtoModel.findByIdAndUpdate.mockReturnValue(
+      criarSelectPopulateMock(atualizado),
+    );
 
     const resultado = await service.update('abc123', { preco: 16000 });
 
@@ -185,27 +199,38 @@ describe('ProdutosService', () => {
   });
 
   it('update deve lançar NotFoundException quando o produto não existe', async () => {
-    produtoModel.findByIdAndUpdate.mockReturnValue(criarSelectPopulateMock(null));
+    produtoModel.findByIdAndUpdate.mockReturnValue(
+      criarSelectPopulateMock(null),
+    );
 
-    await expect(service.update('64f0000000000000000000ab', { preco: 100 })).rejects.toThrow(
-      new NotFoundException('Produto com ID 64f0000000000000000000ab não encontrado'),
+    await expect(
+      service.update('64f0000000000000000000ab', { preco: 100 }),
+    ).rejects.toThrow(
+      new NotFoundException(
+        'Produto com ID 64f0000000000000000000ab não encontrado',
+      ),
     );
   });
 
-  it('update deve diferenciar CastError do :id e CastError do campo categoria', async () => {
+  it('update deve propagar o erro bruto de CastError (:id ou categoria) sem tratar aqui', async () => {
+    const erroBruto = { name: 'CastError', path: 'categoria' };
     produtoModel.findByIdAndUpdate.mockReturnValue(
-      criarSelectPopulateMock({ name: 'CastError', path: 'categoria' }, true),
+      criarSelectPopulateMock(erroBruto, true),
     );
 
-    await expect(service.update('abc123', { categoria: 'invalido' })).rejects.toThrow(
-      new BadRequestException('O campo categoria deve ser o ObjectId de uma Categoria existente'),
-    );
+    await expect(
+      service.update('abc123', { categoria: 'invalido' }),
+    ).rejects.toBe(erroBruto);
   });
 
   it('update deve logar "Atenção: Estoque Crítico" quando estoque for atualizado para menos de 5', async () => {
     const atualizado = { _id: 'abc123', estoque: 2 };
-    produtoModel.findByIdAndUpdate.mockReturnValue(criarSelectPopulateMock(atualizado));
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    produtoModel.findByIdAndUpdate.mockReturnValue(
+      criarSelectPopulateMock(atualizado),
+    );
+    const consoleSpy = jest
+      .spyOn(console, 'log')
+      .mockImplementation(() => undefined);
 
     await service.update('abc123', { estoque: 2 });
 
@@ -215,8 +240,12 @@ describe('ProdutosService', () => {
 
   it('update NÃO deve logar o alerta quando o estoque atualizado for 5 ou mais', async () => {
     const atualizado = { _id: 'abc123', estoque: 10 };
-    produtoModel.findByIdAndUpdate.mockReturnValue(criarSelectPopulateMock(atualizado));
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    produtoModel.findByIdAndUpdate.mockReturnValue(
+      criarSelectPopulateMock(atualizado),
+    );
+    const consoleSpy = jest
+      .spyOn(console, 'log')
+      .mockImplementation(() => undefined);
 
     await service.update('abc123', { estoque: 10 });
 
@@ -225,8 +254,14 @@ describe('ProdutosService', () => {
   });
 
   it('delete deve remover o produto quando o estoque estiver zerado', async () => {
-    const produtoSemEstoque = { _id: 'abc123', nome: 'Torno CNC X200', estoque: 0 };
-    produtoModel.findById.mockReturnValue(criarSelectPopulateMock(produtoSemEstoque));
+    const produtoSemEstoque = {
+      _id: 'abc123',
+      nome: 'Torno CNC X200',
+      estoque: 0,
+    };
+    produtoModel.findById.mockReturnValue(
+      criarSelectPopulateMock(produtoSemEstoque),
+    );
     produtoModel.findByIdAndDelete.mockResolvedValue(produtoSemEstoque);
 
     await service.delete('abc123');
@@ -235,11 +270,19 @@ describe('ProdutosService', () => {
   });
 
   it('delete deve lançar BadRequestException quando o produto ainda tem estoque', async () => {
-    const produtoComEstoque = { _id: 'abc123', nome: 'Torno CNC X200', estoque: 5 };
-    produtoModel.findById.mockReturnValue(criarSelectPopulateMock(produtoComEstoque));
+    const produtoComEstoque = {
+      _id: 'abc123',
+      nome: 'Torno CNC X200',
+      estoque: 5,
+    };
+    produtoModel.findById.mockReturnValue(
+      criarSelectPopulateMock(produtoComEstoque),
+    );
 
     await expect(service.delete('abc123')).rejects.toThrow(
-      new BadRequestException('Não é possível excluir produtos com itens em estoque'),
+      new BadRequestException(
+        'Não é possível excluir produtos com itens em estoque',
+      ),
     );
     expect(produtoModel.findByIdAndDelete).not.toHaveBeenCalled();
   });
@@ -248,7 +291,9 @@ describe('ProdutosService', () => {
     produtoModel.findById.mockReturnValue(criarSelectPopulateMock(null));
 
     await expect(service.delete('64f0000000000000000000ab')).rejects.toThrow(
-      new NotFoundException('Produto com ID 64f0000000000000000000ab não encontrado'),
+      new NotFoundException(
+        'Produto com ID 64f0000000000000000000ab não encontrado',
+      ),
     );
     expect(produtoModel.findByIdAndDelete).not.toHaveBeenCalled();
   });
