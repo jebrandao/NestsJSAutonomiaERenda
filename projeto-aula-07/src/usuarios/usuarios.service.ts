@@ -111,4 +111,30 @@ export class UsuariosService {
   async salvarRefreshTokenHash(id: string, hash: string): Promise<void> {
     await this.usuarioModel.findByIdAndUpdate(id, { refreshTokenHash: hash });
   }
+
+  // Aula 35: Atividade Prática - "Auditoria LGPD" (Direito ao Esquecimento).
+  // Soft-delete com anonimização: o documento nunca é removido de verdade
+  // (preserva o _id para integridade referencial), mas nome e e-mail — os
+  // dados pessoais que a atividade pede para apagar — viram uma string
+  // fixa, e dataExclusao registra quando isso aconteceu.
+  // refreshTokenHash também é limpo: uma conta "excluída" não pode
+  // continuar gerando novos Access Tokens via /auth/refresh.
+  async remover(id: string): Promise<void> {
+    const usuario = await this.usuarioModel.findById(id);
+
+    if (!usuario) {
+      throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
+    }
+
+    usuario.nome = 'USUÁRIO_ANONIMIZADO';
+    usuario.email = 'USUÁRIO_ANONIMIZADO';
+    usuario.refreshTokenHash = undefined;
+    usuario.dataExclusao = new Date();
+    // ativo: false tira o e-mail anonimizado do escopo do índice único
+    // parcial (ver schema) — sem isso, a 2ª conta excluída colidiria com a
+    // 1ª (erro 11000, as duas com o mesmo e-mail "USUÁRIO_ANONIMIZADO").
+    usuario.ativo = false;
+
+    await usuario.save();
+  }
 }

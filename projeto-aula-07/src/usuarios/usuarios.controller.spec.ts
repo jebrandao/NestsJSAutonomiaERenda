@@ -11,6 +11,7 @@ describe('UsuariosController', () => {
     findOne: jest.Mock;
     update: jest.Mock;
     validar: jest.Mock;
+    remover: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -20,6 +21,7 @@ describe('UsuariosController', () => {
       findOne: jest.fn(),
       update: jest.fn(),
       validar: jest.fn(),
+      remover: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -113,5 +115,26 @@ describe('UsuariosController', () => {
     });
 
     expect(resultado).toBe('Senha Incorreta');
+  });
+
+  // Aula 35: Atividade Prática - "Auditoria LGPD" (Direito ao Esquecimento).
+  it('remover deve delegar o ID ao service', async () => {
+    usuariosService.remover.mockResolvedValue(undefined);
+
+    await controller.remover('abc123');
+
+    expect(usuariosService.remover).toHaveBeenCalledWith('abc123');
+  });
+
+  it('remover deve propagar NotFoundException para ID inexistente', async () => {
+    usuariosService.remover.mockRejectedValue(
+      new NotFoundException(
+        'Usuário com ID 64f0000000000000000000ab não encontrado',
+      ),
+    );
+
+    await expect(
+      controller.remover('64f0000000000000000000ab'),
+    ).rejects.toThrow(NotFoundException);
   });
 });

@@ -210,4 +210,40 @@ describe('UsuariosService', () => {
       expect(resultado).toBeNull();
     });
   });
+
+  // Aula 35: Atividade Prática - "Auditoria LGPD" (Direito ao Esquecimento).
+  describe('remover', () => {
+    it('deve anonimizar nome/e-mail, limpar refreshTokenHash, marcar ativo:false e registrar dataExclusao', async () => {
+      const save = jest.fn().mockResolvedValue(undefined);
+      const usuario = {
+        nome: 'Ana Torres',
+        email: 'ana@empresa.com',
+        refreshTokenHash: 'hash-antigo',
+        ativo: true,
+        save,
+      };
+      usuarioModel.findById.mockResolvedValue(usuario);
+
+      await service.remover('abc123');
+
+      expect(usuario.nome).toBe('USUÁRIO_ANONIMIZADO');
+      expect(usuario.email).toBe('USUÁRIO_ANONIMIZADO');
+      expect(usuario.refreshTokenHash).toBeUndefined();
+      expect(usuario.ativo).toBe(false);
+      expect(
+        (usuario as unknown as { dataExclusao: Date }).dataExclusao,
+      ).toBeInstanceOf(Date);
+      expect(save).toHaveBeenCalled();
+    });
+
+    it('deve lançar NotFoundException quando o usuário não existe', async () => {
+      usuarioModel.findById.mockResolvedValue(null);
+
+      await expect(service.remover('64f0000000000000000000ab')).rejects.toThrow(
+        new NotFoundException(
+          'Usuário com ID 64f0000000000000000000ab não encontrado',
+        ),
+      );
+    });
+  });
 });

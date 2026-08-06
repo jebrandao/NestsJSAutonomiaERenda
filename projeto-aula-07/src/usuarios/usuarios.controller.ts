@@ -1,9 +1,26 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { ValidarUsuarioDto } from './dto/validar-usuario.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('usuarios')
 @Controller('usuarios')
@@ -80,5 +97,27 @@ export class UsuariosController {
       validarUsuarioDto.email,
       validarUsuarioDto.senha,
     );
+  }
+
+  // DELETE /usuarios/:id
+  // Aula 35: Atividade Prática - "Auditoria LGPD" (Direito ao Esquecimento).
+  // Autenticada (JwtAuthGuard) porque o slide é explícito: "endpoint
+  // dedicado recebe a requisição de exclusão autenticada do titular".
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Exclui a conta (soft-delete com anonimização de nome/e-mail)',
+  })
+  @ApiResponse({ status: 204, description: 'Conta anonimizada com sucesso.' })
+  @ApiResponse({ status: 400, description: 'ID em formato inválido.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Token ausente, inválido ou expirado.',
+  })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
+  async remover(@Param('id') id: string) {
+    await this.usuariosService.remover(id);
   }
 }

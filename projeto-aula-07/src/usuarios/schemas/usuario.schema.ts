@@ -13,7 +13,11 @@ export class Usuario {
   @Prop({ required: true, trim: true })
   nome: string;
 
-  @Prop({ required: true, unique: true, trim: true, lowercase: true })
+  // Aula 35: unique: true saiu daqui — a unicidade agora é garantida por um
+  // índice parcial abaixo, que ignora contas anonimizadas (Direito ao
+  // Esquecimento). Sem isso, a 2ª conta excluída bateria de frente com a
+  // 1ª: as duas teriam o mesmo e-mail "USUÁRIO_ANONIMIZADO" (erro 11000).
+  @Prop({ required: true, trim: true, lowercase: true })
   email: string;
 
   @Prop({ required: true })
@@ -31,9 +35,32 @@ export class Usuario {
   // Sem default: usuários recém-cadastrados não têm sessão até fazer login.
   @Prop()
   refreshTokenHash?: string;
+
+  // Aula 35: Atividade Prática - "Auditoria LGPD" (Direito ao Esquecimento).
+  // Presença deste campo = conta anonimizada. Nunca apagamos o documento de
+  // verdade (o _id precisa sobreviver para integridade referencial de
+  // qualquer coisa que aponte para este usuário); só os dados pessoais são
+  // substituídos.
+  @Prop()
+  dataExclusao?: Date;
+
+  // Só existe para viabilizar o índice parcial abaixo — o MongoDB não
+  // aceita { $exists: false } em partialFilterExpression (só $exists: true
+  // e comparações de igualdade), então "conta ativa" precisa ser expresso
+  // como ativo: true, não como "dataExclusao ausente".
+  @Prop({ default: true })
+  ativo: boolean;
 }
 
 export const UsuarioSchema = SchemaFactory.createForClass(Usuario);
+
+// Índice único PARCIAL: exige e-mail único só entre contas ainda ativas.
+// Contas anonimizadas (ativo: false) compartilham o mesmo valor de e-mail
+// sem violar a unicidade.
+UsuarioSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { ativo: true } },
+);
 
 // function(), nunca arrow function: o hook precisa do `this` do documento
 // sendo salvo, que uma arrow function não possui (quebraria o acesso a

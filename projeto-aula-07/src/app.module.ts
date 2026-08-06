@@ -1,4 +1,9 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
@@ -32,6 +37,7 @@ import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtRefreshStrategy } from './auth/jwt-refresh.strategy';
+import { AuditoriaPerfilMiddleware } from './usuarios/auditoria-perfil.middleware';
 
 @Module({
   imports: [
@@ -135,5 +141,12 @@ export class AppModule implements NestModule {
         }),
       )
       .forRoutes('auth/login');
+
+    // Aula 35: Atividade Prática - "Auditoria LGPD".
+    // Só GET (visualização de perfil) — PATCH/DELETE em usuarios/:id não
+    // são "acesso ao perfil" no sentido de leitura que a atividade pede.
+    consumer
+      .apply(AuditoriaPerfilMiddleware)
+      .forRoutes({ path: 'usuarios/:id', method: RequestMethod.GET });
   }
 }
