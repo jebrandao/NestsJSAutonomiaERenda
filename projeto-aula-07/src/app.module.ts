@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { rateLimit } from 'express-rate-limit';
 import type { Connection } from 'mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -115,5 +116,24 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     // Aplicado a todas as rotas da aplicação, como pede a atividade.
     consumer.apply(LoggerMiddleware).forRoutes('*');
+
+    // Aula 34: Atividade Prática - "Blindagem de API".
+    // /auth/login é o alvo clássico de força bruta — 10 tentativas por
+    // minuto por IP é suficiente para um usuário legítimo errar a senha
+    // algumas vezes, mas inviabiliza testar senhas em massa.
+    consumer
+      .apply(
+        rateLimit({
+          windowMs: 60 * 1000,
+          max: 10,
+          standardHeaders: true,
+          legacyHeaders: false,
+          message: {
+            message:
+              'Muitas tentativas de login. Tente novamente em instantes.',
+          },
+        }),
+      )
+      .forRoutes('auth/login');
   }
 }
