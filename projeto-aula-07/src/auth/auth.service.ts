@@ -19,9 +19,15 @@ export class AuthService {
       throw new UnauthorizedException('E-mail ou senha inválidos');
     }
 
-    // sub e email são as claims pedidas pelo slide. Nada de dados sensíveis
-    // no payload — ele é apenas codificado em Base64, não criptografado.
-    const payload = { sub: String(usuario._id), email: usuario.email };
+    // sub e email são as claims pedidas pelo slide (Aula 30); roles entrou
+    // na Aula 32 — é o que o RolesGuard lê em request.user para autorização.
+    // Nada de dados sensíveis no payload — ele é apenas codificado em
+    // Base64, não criptografado.
+    const payload = {
+      sub: String(usuario._id),
+      email: usuario.email,
+      roles: usuario.roles,
+    };
 
     return { access_token: await this.jwtService.signAsync(payload) };
   }

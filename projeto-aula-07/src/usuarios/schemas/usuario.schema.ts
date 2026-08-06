@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
+import { Role } from '../../auth/role.enum';
 
 const SALT_ROUNDS = 10;
 
@@ -17,6 +18,13 @@ export class Usuario {
 
   @Prop({ required: true })
   senha: string;
+
+  // Aula 32: Atividade Prática - "Sistema de Controle de Fábrica".
+  // Array (um usuário pode ter mais de um papel), com default seguro:
+  // todo cadastro novo entra como o papel menos privilegiado (operador).
+  // enum: Role faz o Mongoose rejeitar qualquer valor fora do enum.
+  @Prop({ type: [String], enum: Role, default: [Role.OPERADOR] })
+  roles: Role[];
 }
 
 export const UsuarioSchema = SchemaFactory.createForClass(Usuario);

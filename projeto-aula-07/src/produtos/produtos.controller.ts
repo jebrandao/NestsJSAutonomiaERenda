@@ -23,6 +23,9 @@ import { CreateProdutoDto } from './dto/create-produto.dto';
 import { FiltrosProdutoDto } from './dto/filtros-produto.dto';
 import { UpdateProdutoDto } from './dto/update-produto.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { Role } from '../auth/role.enum';
 
 // Aula 31: Atividade Prática - "Acesso Restrito ao Inventário".
 // @UseGuards no topo da classe protege todos os endpoints de uma só vez —
@@ -103,15 +106,24 @@ export class ProdutosController {
   }
 
   // DELETE /produtos/:id
+  // Aula 32: Atividade Prática - "Sistema de Controle de Fábrica".
+  // RolesGuard roda depois do JwtAuthGuard da classe (já garantido) e exige
+  // Role.ADMIN — um operador autenticado recebe 403, não 401.
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Remove um produto (somente se o estoque estiver zerado)',
+    summary: 'Remove um produto (somente admin, e só com estoque zerado)',
   })
   @ApiResponse({ status: 204, description: 'Produto removido com sucesso.' })
   @ApiResponse({
     status: 400,
     description: 'ID inválido ou produto ainda possui itens em estoque.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário autenticado, mas sem o papel admin.',
   })
   @ApiResponse({ status: 404, description: 'Produto não encontrado.' })
   async remover(@Param('id') id: string) {

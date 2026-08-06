@@ -1,4 +1,5 @@
 import { JwtStrategy } from './jwt.strategy';
+import { Role } from './role.enum';
 
 describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
@@ -15,12 +16,18 @@ describe('JwtStrategy', () => {
   });
 
   // Aula 31: o retorno de validate() vira req.user nos controllers.
-  it('validate deve mapear sub/email do payload para userId/email', () => {
+  // Aula 32: roles também precisa passar adiante para o RolesGuard funcionar.
+  it('validate deve mapear sub/email/roles do payload para userId/email/roles', () => {
     const resultado = strategy.validate({
       sub: 'abc123',
       email: 'ana@empresa.com',
+      roles: [Role.ADMIN],
     });
 
-    expect(resultado).toEqual({ userId: 'abc123', email: 'ana@empresa.com' });
+    expect(resultado).toEqual({
+      userId: 'abc123',
+      email: 'ana@empresa.com',
+      roles: [Role.ADMIN],
+    });
   });
 });

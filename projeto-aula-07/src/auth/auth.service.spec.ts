@@ -3,6 +3,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { UsuariosService } from '../usuarios/usuarios.service';
+import { Role } from './role.enum';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -28,10 +29,11 @@ describe('AuthService', () => {
     expect(service).toBeDefined();
   });
 
-  it('login deve retornar access_token com payload sub/email quando as credenciais são válidas', async () => {
+  it('login deve retornar access_token com payload sub/email/roles quando as credenciais são válidas', async () => {
     usuariosService.validarCredenciais.mockResolvedValue({
       _id: 'abc123',
       email: 'ana@empresa.com',
+      roles: [Role.OPERADOR],
     });
     jwtService.signAsync.mockResolvedValue('token.assinado.aqui');
 
@@ -44,6 +46,7 @@ describe('AuthService', () => {
     expect(jwtService.signAsync).toHaveBeenCalledWith({
       sub: 'abc123',
       email: 'ana@empresa.com',
+      roles: [Role.OPERADOR],
     });
     expect(resultado).toEqual({ access_token: 'token.assinado.aqui' });
   });
