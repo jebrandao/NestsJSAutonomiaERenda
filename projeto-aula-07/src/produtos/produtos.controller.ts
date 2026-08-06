@@ -9,14 +9,31 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ProdutosService } from './produtos.service';
 import { CreateProdutoDto } from './dto/create-produto.dto';
 import { FiltrosProdutoDto } from './dto/filtros-produto.dto';
 import { UpdateProdutoDto } from './dto/update-produto.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+// Aula 31: Atividade Prática - "Acesso Restrito ao Inventário".
+// @UseGuards no topo da classe protege todos os endpoints de uma só vez —
+// nenhuma rota de /produtos responde sem um Bearer Token válido.
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @ApiTags('produtos')
+@ApiResponse({
+  status: 401,
+  description: 'Token ausente, inválido ou expirado.',
+})
 @Controller('produtos')
 export class ProdutosController {
   constructor(private readonly produtosService: ProdutosService) {}

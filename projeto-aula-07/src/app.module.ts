@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import type { Connection } from 'mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -28,6 +29,7 @@ import { UsuariosService } from './usuarios/usuarios.service';
 import { Usuario, UsuarioSchema } from './usuarios/schemas/usuario.schema';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
+import { JwtStrategy } from './auth/jwt.strategy';
 
 @Module({
   imports: [
@@ -79,6 +81,9 @@ import { AuthService } from './auth/auth.service';
       }),
       inject: [ConfigService],
     }),
+    // Aula 31: registra a estratégia 'jwt' no Passport para o AuthGuard('jwt')
+    // (usado pelo JwtAuthGuard) conseguir localizá-la.
+    PassportModule,
   ],
   controllers: [
     AppController,
@@ -101,6 +106,7 @@ import { AuthService } from './auth/auth.service';
     CategoriasService,
     UsuariosService,
     AuthService,
+    JwtStrategy,
   ],
 })
 export class AppModule implements NestModule {

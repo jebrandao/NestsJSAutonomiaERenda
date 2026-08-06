@@ -19,11 +19,14 @@ async function bootstrap() {
   app.useGlobalFilters(new MongoExceptionFilter());
 
   // Aula 17: documentação Swagger/OpenAPI, disponível em /docs.
+  // Aula 31: addBearerAuth() habilita o botão "Authorize" no Swagger UI,
+  // necessário para testar rotas protegidas por JwtAuthGuard (ex.: /produtos).
   const config = new DocumentBuilder()
     .setTitle('Backend NestJS - Codificação para Back-End')
     .setDescription('API construída ao longo das aulas do curso SENAI-CRTI.')
     .setVersion('1.0')
     .addTag('produtos')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
