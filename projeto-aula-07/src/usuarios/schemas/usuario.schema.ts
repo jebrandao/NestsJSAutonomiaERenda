@@ -25,6 +25,12 @@ export class Usuario {
   // enum: Role faz o Mongoose rejeitar qualquer valor fora do enum.
   @Prop({ type: [String], enum: Role, default: [Role.OPERADOR] })
   roles: Role[];
+
+  // Aula 33: Atividade Prática - "O Token Infinito (mas seguro)".
+  // Nunca o Refresh Token puro — só o hash, no mesmo raciocínio da senha.
+  // Sem default: usuários recém-cadastrados não têm sessão até fazer login.
+  @Prop()
+  refreshTokenHash?: string;
 }
 
 export const UsuarioSchema = SchemaFactory.createForClass(Usuario);

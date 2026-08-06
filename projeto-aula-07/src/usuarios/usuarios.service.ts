@@ -22,16 +22,20 @@ export class UsuariosService {
     return this.findOne(String(usuario._id));
   }
 
-  // select('-senha') garante que o hash nunca vaze pela API — a verificação
-  // do hash é feita direto no MongoDB Atlas/Compass, como pede a atividade.
+  // select('-senha ...') garante que os hashes nunca vazem pela API — a
+  // verificação é feita direto no MongoDB Atlas/Compass, como pede a
+  // atividade (Aula 29 para senha, mesmo raciocínio vale para
+  // refreshTokenHash desde a Aula 33).
   async findAll() {
-    return this.usuarioModel.find().select('-senha').exec();
+    return this.usuarioModel.find().select('-senha -refreshTokenHash').exec();
   }
 
   // Aula 27: um :id em formato inválido dispara CastError, capturado pelo
   // MongoExceptionFilter global — não precisa mais de try/catch aqui.
   async findOne(id: string) {
-    const usuario = await this.usuarioModel.findById(id).select('-senha');
+    const usuario = await this.usuarioModel
+      .findById(id)
+      .select('-senha -refreshTokenHash');
 
     if (!usuario) {
       throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
@@ -88,5 +92,23 @@ export class UsuariosService {
 
     const senhaValida = await bcrypt.compare(senha, usuario.senha);
     return senhaValida ? usuario : null;
+  }
+
+  // Aula 33: usado pela JwtRefreshStrategy para conferir o hash salvo — sem
+  // select('-refreshTokenHash'), já que é exatamente o campo que ela precisa.
+  // findById (não findOne wrapper) para não lançar NotFoundException aqui:
+  // um refresh token de usuário inexistente deve virar 401 (Unauthorized),
+  // não 404, e quem decide isso é a Strategy, não este método.
+  async buscarParaRefresh(
+    id: string,
+  ): Promise<HydratedDocument<Usuario> | null> {
+    return this.usuarioModel.findById(id);
+  }
+
+  // Aula 33: chamado pelo AuthService após gerar um novo Refresh Token no
+  // login — findByIdAndUpdate é suficiente aqui porque refreshTokenHash não
+  // participa do hook pre('save') (só a senha participa).
+  async salvarRefreshTokenHash(id: string, hash: string): Promise<void> {
+    await this.usuarioModel.findByIdAndUpdate(id, { refreshTokenHash: hash });
   }
 }

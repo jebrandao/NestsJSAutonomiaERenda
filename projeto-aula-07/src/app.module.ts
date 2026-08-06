@@ -30,6 +30,7 @@ import { Usuario, UsuarioSchema } from './usuarios/schemas/usuario.schema';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { JwtStrategy } from './auth/jwt.strategy';
+import { JwtRefreshStrategy } from './auth/jwt-refresh.strategy';
 
 @Module({
   imports: [
@@ -107,6 +108,7 @@ import { JwtStrategy } from './auth/jwt.strategy';
     UsuariosService,
     AuthService,
     JwtStrategy,
+    JwtRefreshStrategy,
   ],
 })
 export class AppModule implements NestModule {

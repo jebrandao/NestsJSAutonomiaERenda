@@ -5,10 +5,10 @@ import { AuthService } from './auth.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let authService: { login: jest.Mock };
+  let authService: { login: jest.Mock; refresh: jest.Mock };
 
   beforeEach(async () => {
-    authService = { login: jest.fn() };
+    authService = { login: jest.fn(), refresh: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
@@ -22,9 +22,10 @@ describe('AuthController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('login deve delegar email e senha ao service e retornar o access_token', async () => {
+  it('login deve delegar email e senha ao service e retornar access_token + refresh_token', async () => {
     authService.login.mockResolvedValue({
       access_token: 'token.assinado.aqui',
+      refresh_token: 'refresh.assinado.aqui',
     });
 
     const resultado = await controller.login({
@@ -36,7 +37,10 @@ describe('AuthController', () => {
       'ana@empresa.com',
       'senai123',
     );
-    expect(resultado).toEqual({ access_token: 'token.assinado.aqui' });
+    expect(resultado).toEqual({
+      access_token: 'token.assinado.aqui',
+      refresh_token: 'refresh.assinado.aqui',
+    });
   });
 
   it('login deve propagar UnauthorizedException para credenciais inválidas', async () => {
@@ -47,5 +51,18 @@ describe('AuthController', () => {
     await expect(
       controller.login({ email: 'ana@empresa.com', senha: 'errada' }),
     ).rejects.toThrow(UnauthorizedException);
+  });
+
+  // Aula 33: o userId já vem validado em req.user pelo JwtRefreshAuthGuard.
+  it('refresh deve delegar o userId de req.user ao service', async () => {
+    authService.refresh.mockResolvedValue({
+      access_token: 'novo.access.token',
+    });
+
+    const req = { user: { userId: 'abc123' } } as never;
+    const resultado = await controller.refresh(req);
+
+    expect(authService.refresh).toHaveBeenCalledWith('abc123');
+    expect(resultado).toEqual({ access_token: 'novo.access.token' });
   });
 });
