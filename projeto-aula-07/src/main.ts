@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { join } from 'path';
 import { AppModule } from './app.module';
 import { MongoExceptionFilter } from './common/filters/mongo-exception.filter';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -31,7 +32,16 @@ async function bootstrap() {
   // Aula 27: filtro global — intercepta erros de banco (CastError, E11000,
   // ValidationError, falha de conexão) em qualquer controller, sem precisar
   // repetir try/catch em cada método.
-  app.useGlobalFilters(new MongoExceptionFilter());
+  // Aula 39: ordem AQUI É AO CONTRÁRIO do que parece — internamente o Nest
+  // faz filters.reverse() antes de testá-los (RouterExceptionFilters.create,
+  // @nestjs/core), então o ÚLTIMO filtro passado para useGlobalFilters() é o
+  // PRIMEIRO a ser tentado. AllExceptionsFilter usa @Catch() sem argumentos
+  // (bate com QUALQUER exceção), então se ele viesse primeiro na lista,
+  // engoliria até os erros de banco antes do MongoExceptionFilter ver
+  // algo — foi exatamente o que aconteceu na primeira tentativa (Cast
+  // Error de Mongoose caindo no filtro genérico). AllExceptionsFilter
+  // precisa vir PRIMEIRO aqui para acabar rodando POR ÚLTIMO de verdade.
+  app.useGlobalFilters(new AllExceptionsFilter(), new MongoExceptionFilter());
 
   // Aula 17: documentação Swagger/OpenAPI, disponível em /docs.
   // Aula 31: addBearerAuth() habilita o botão "Authorize" no Swagger UI,

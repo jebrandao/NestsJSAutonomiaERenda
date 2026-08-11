@@ -5,10 +5,12 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Logger,
   Param,
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,6 +20,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { ProdutosService } from './produtos.service';
 import { CreateProdutoDto } from './dto/create-produto.dto';
 import { FiltrosProdutoDto } from './dto/filtros-produto.dto';
@@ -26,6 +29,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/role.enum';
+import type { UsuarioAutenticado } from '../auth/jwt.strategy';
+
+interface RequisicaoAutenticada extends Request {
+  user: UsuarioAutenticado;
+}
 
 // Aula 31: Atividade Prática - "Acesso Restrito ao Inventário".
 // @UseGuards no topo da classe protege todos os endpoints de uma só vez —
@@ -39,9 +47,15 @@ import { Role } from '../auth/role.enum';
 })
 @Controller('produtos')
 export class ProdutosController {
+  private readonly logger = new Logger(ProdutosController.name);
+
   constructor(private readonly produtosService: ProdutosService) {}
 
   // POST /produtos
+  // Aula 39: Atividade Prática - "O Inspetor de Falhas" (passo 2).
+  // Log de nível INFO em toda operação crítica de escrita — quem cadastrou
+  // o quê e quando. O e-mail vem de request.user (JwtAuthGuard já validou o
+  // token antes deste método rodar), não do corpo da requisição.
   @Post()
   @ApiOperation({ summary: 'Cria um novo produto' })
   @ApiResponse({ status: 201, description: 'Produto criado com sucesso.' })
@@ -53,8 +67,15 @@ export class ProdutosController {
     status: 409,
     description: 'Já existe um produto com este nome.',
   })
-  criar(@Body() createProdutoDto: CreateProdutoDto) {
-    return this.produtosService.create(createProdutoDto);
+  async criar(
+    @Body() createProdutoDto: CreateProdutoDto,
+    @Req() req: RequisicaoAutenticada,
+  ) {
+    const produto = await this.produtosService.create(createProdutoDto);
+    this.logger.log(
+      `Produto cadastrado — produtoId: ${String(produto._id)}, usuario: ${req.user.email}`,
+    );
+    return produto;
   }
 
   // GET /produtos?categoria=EPI&ordenar=preco_asc&pagina=2

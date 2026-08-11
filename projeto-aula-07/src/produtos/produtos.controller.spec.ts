@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { ProdutosController } from './produtos.controller';
 import { ProdutosService } from './produtos.service';
 
@@ -34,13 +34,23 @@ describe('ProdutosController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('criar deve delegar ao service e retornar o produto criado', async () => {
+  it('criar deve delegar ao service, retornar o produto criado e logar produtoId + email do usuário', async () => {
     const dto = { nome: 'Torno CNC X200', preco: 15000, categoria: 'cat123' };
     const criado = { _id: 'abc123', ...dto };
     produtosService.create.mockResolvedValue(criado);
+    const req = { user: { email: 'ana@empresa.com' } } as never;
+    const logSpy = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
 
-    await expect(controller.criar(dto)).resolves.toEqual(criado);
+    await expect(controller.criar(dto, req)).resolves.toEqual(criado);
+
     expect(produtosService.create).toHaveBeenCalledWith(dto);
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('abc123'));
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining('ana@empresa.com'),
+    );
+    logSpy.mockRestore();
   });
 
   it('findAll deve delegar os filtros ao service', async () => {
