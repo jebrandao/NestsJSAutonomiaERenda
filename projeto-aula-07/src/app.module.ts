@@ -38,6 +38,7 @@ import { AuthService } from './auth/auth.service';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtRefreshStrategy } from './auth/jwt-refresh.strategy';
 import { AuditoriaPerfilMiddleware } from './usuarios/auditoria-perfil.middleware';
+import { StatusController } from './status/status.controller';
 
 @Module({
   imports: [
@@ -115,6 +116,7 @@ import { AuditoriaPerfilMiddleware } from './usuarios/auditoria-perfil.middlewar
     CategoriasController,
     UsuariosController,
     AuthController,
+    StatusController,
   ],
   providers: [
     AppService,
