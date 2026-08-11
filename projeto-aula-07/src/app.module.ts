@@ -42,7 +42,17 @@ import { AuditoriaPerfilMiddleware } from './usuarios/auditoria-perfil.middlewar
 @Module({
   imports: [
     // Aula 18: variáveis de ambiente disponíveis em toda a aplicação.
-    ConfigModule.forRoot({ isGlobal: true }),
+    // Aula 36: qual arquivo .env carregar depende do NODE_ENV — o mesmo
+    // princípio Twelve-Factor App de "código idêntico entre ambientes,
+    // só a configuração muda". NODE_ENV precisa estar definido no shell
+    // ANTES de subir o processo (ex.: NODE_ENV=production node dist/main.js),
+    // porque o ConfigModule lê esse valor no boot, antes mesmo de o .env
+    // correspondente ser carregado.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath:
+        process.env.NODE_ENV === 'production' ? '.env.production' : '.env',
+    }),
     // Aula 19: conexão com o MongoDB gerenciada pelo Nest (substitui o
     // mongoose.connect() manual chamado antes diretamente em main.ts).
     MongooseModule.forRootAsync({
