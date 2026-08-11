@@ -81,7 +81,7 @@ Modelo completo e comentado: [`/.env.production.example`](./.env.production.exam
 
 ## 3. Mapa de Rotas Protegidas
 
-Levantamento feito lendo o código de todos os Controllers (não um resumo de memória) — reflete o estado real do sistema nesta entrega, incluindo as inconsistências encontradas (ver seção 6).
+Levantamento feito lendo o código de todos os Controllers (não um resumo de memória) — reflete o estado real do sistema nesta entrega. Os gaps originalmente encontrados nesta seção (UsuariosController inconsistente; Convidados, Livros, Media e Colaboradores sem proteção nenhuma) foram corrigidos — ver histórico de commits.
 
 ### Rotas que exigem JWT válido (`JwtAuthGuard` — Access Token no header `Authorization: Bearer <token>`)
 
@@ -92,7 +92,15 @@ Levantamento feito lendo o código de todos os Controllers (não um resumo de me
 | `GET /produtos/:id` | idem |
 | `PATCH /produtos/:id` | idem |
 | `DELETE /produtos/:id` | JWT **+** Role Admin (ver abaixo) |
+| `GET /usuarios` | Guard aplicado só neste método — listar todos os usuários não pode ser público |
+| `GET /usuarios/:id` | idem |
+| `PATCH /usuarios/:id` | idem — editar qualquer usuário sem token era um vetor de escrita real |
 | `DELETE /usuarios/:id` | Guard aplicado só neste método (Aula 35 — exclusão do titular precisa ser autenticada) |
+| `GET /convidados`, `POST /convidados`, `PATCH /convidados/:id`, `DELETE /convidados/:id` | Guard aplicado no nível da classe `ConvidadosController` |
+| `GET /livros/:id` | Guard aplicado no nível da classe `LivrosController` |
+| `POST /media/upload` | Guard aplicado no nível da classe `MediaController` — evita upload anônimo de arquivos |
+| `POST /colaboradores` | Guard aplicado no nível da classe `ColaboradoresController` |
+| `POST /categorias`, `GET /categorias` | Guard aplicado no nível da classe `CategoriasController` |
 
 ### Rotas que exigem JWT + papel Admin (`JwtAuthGuard` + `RolesGuard` + `@Roles(Role.ADMIN)`)
 
@@ -106,9 +114,9 @@ Levantamento feito lendo o código de todos os Controllers (não um resumo de me
 |---|---|
 | `POST /auth/refresh` | Valida o **Refresh Token** (assinado com `JWT_REFRESH_SECRET`, verificado contra o hash salvo no banco), não o Access Token. Não confundir com `JwtAuthGuard`. |
 
-### Rotas públicas (sem nenhum Guard)
+### Rotas públicas (sem nenhum Guard) — deliberadamente, são pontos de entrada antes de existir um token
 
-`GET /api`, `GET /status`, `POST /auth/login` (com rate limit de 10 req/min por IP), `POST /usuarios`, `GET /usuarios`, `GET /usuarios/:id`, `PATCH /usuarios/:id`, `POST /usuarios/validar`, `POST /categorias`, `GET /categorias`, `GET /convidados`, `POST /convidados`, `PATCH /convidados/:id`, `DELETE /convidados/:id`, `GET /livros/:id`, `POST /media/upload`, `POST /colaboradores`.
+`GET /api`, `GET /status` (health check — plataformas de Cloud precisam bater aqui sem token), `POST /auth/login` (com rate limit de 10 req/min por IP), `POST /usuarios` (cadastro), `POST /usuarios/validar` (checagem de credenciais pré-login).
 
 ### Rotas com controle de acesso "manual" (fora do sistema de Guards do Nest — não confundir com JWT)
 
@@ -201,12 +209,18 @@ Recomendações:
 
 ## 6. Débitos técnicos conhecidos
 
-Registrados aqui porque o objetivo de um handover é a próxima equipe não descobrir isso durante um incidente. Levantados rodando o "Teste de Permissão" pedido pela atividade desta aula.
+Registrados aqui porque o objetivo de um handover é a próxima equipe não descobrir isso durante um incidente.
 
-- **A maior parte das rotas do sistema é pública.** Só `produtos/*` tem `JwtAuthGuard` (aplicado no nível da classe) e só `DELETE /produtos/:id` exige o papel Admin. Não existe nenhum `APP_GUARD` global — proteção é opt-in por controller, então qualquer controller novo criado sem `@UseGuards(JwtAuthGuard)` explícito nasce público por padrão.
-- **`UsuariosController` está inconsistente.** `GET /usuarios` devolve a lista de todos os usuários sem autenticação nenhuma; `PATCH /usuarios/:id` permite editar qualquer usuário, de qualquer ID, sem token. Só `DELETE /usuarios/:id` (Aula 35) exige JWT. Isso é uma exposição real de dados de usuários (e-mail, roles) e um vetor de escrita não autenticado — deveria ser corrigido antes de qualquer exposição pública real do sistema.
-- **`GET /admin` e `GET /secreto` não usam o sistema de Guards do Nest.js.** São checagens manuais de headers (`x-user-role`, `x-api-key`) escritas direto no middleware/handler — funcionais como demonstração didática das aulas iniciais do curso, mas não substituem autenticação JWT real (o valor do header é definido pelo próprio cliente, então é trivialmente forjável).
-- **Convidados, Livros, Media (upload de arquivo) e Colaboradores não têm proteção nenhuma.** Herdados de aulas anteriores focadas em outros conceitos (streams, uploads, validação Zod), nunca revisitados depois que JWT/RBAC foram introduzidos (Aulas 30-32).
+**Resolvidos** (levantados na entrega original desta aula, corrigidos logo em seguida — ver histórico de commits):
+
+- ~~A maior parte das rotas do sistema era pública~~ — `JwtAuthGuard` adicionado em `UsuariosController` (GET all, GET :id, PATCH :id), `ConvidadosController`, `LivrosController`, `MediaController`, `ColaboradoresController` e `CategoriasController`. Continuam públicos só os pontos de entrada que precisam ficar assim: cadastro (`POST /usuarios`), checagem de credenciais pré-login (`POST /usuarios/validar`), login (`POST /auth/login`) e health check (`GET /status`).
+- ~~`UsuariosController` inconsistente~~ — corrigido junto com o item acima.
+- ~~Convidados, Livros, Media e Colaboradores sem proteção~~ — corrigido junto com o item acima.
+
+**Ainda em aberto:**
+
+- **Não existe `APP_GUARD` global** — proteção continua opt-in por controller/método, não por padrão. Um controller novo criado sem `@UseGuards(JwtAuthGuard)` explícito nasce público. O padrão recomendado para isso (decorator `@Public()` + `Reflector`, "proteger tudo por padrão") foi apresentado no slide da Aula 31 como boa prática mas nunca implementado — ainda é a forma mais robusta de eliminar esse risco de vez, se algum dia for prioridade.
+- **`GET /admin` e `GET /secreto` não usam o sistema de Guards do Nest.js.** São checagens manuais de headers (`x-user-role`, `x-api-key`) escritas direto no middleware/handler — funcionais como demonstração didática das aulas iniciais do curso (Aula 13), mas não substituem autenticação JWT real (o valor do header é definido pelo próprio cliente, então é trivialmente forjável). Deixadas como estão de propósito — são uma lição diferente, não um guard "faltando".
 
 ---
 

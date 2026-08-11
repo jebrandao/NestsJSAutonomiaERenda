@@ -8,11 +8,23 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ConvidadosService } from './convidados.service';
 import { CreateConvidadoDto } from './dto/create-convidado.dto';
 import { UpdateConvidadoDto } from './dto/update-convidado.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+// Guard adicionado: rota nunca teve autenticação (Aula 08, anterior ao
+// sistema de JWT). Nivelado com o padrão do ProdutosController.
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@ApiTags('convidados')
+@ApiResponse({
+  status: 401,
+  description: 'Token ausente, inválido ou expirado.',
+})
 @Controller('convidados')
 export class ConvidadosController {
   constructor(private readonly convidadosService: ConvidadosService) {}
@@ -36,7 +48,10 @@ export class ConvidadosController {
 
   // PATCH /convidados/:id - altera apenas a idade do convidado indicado.
   @Patch(':id')
-  atualizarIdade(@Param('id') id: string, @Body() updateConvidadoDto: UpdateConvidadoDto) {
+  atualizarIdade(
+    @Param('id') id: string,
+    @Body() updateConvidadoDto: UpdateConvidadoDto,
+  ) {
     console.log(`Atualizando idade do convidado com ID: ${id}`);
     return this.convidadosService.updateIdade(+id, updateConvidadoDto);
   }

@@ -46,31 +46,54 @@ export class UsuariosController {
   }
 
   // GET /usuarios
+  // Corrigido: listar todos os usuários (e-mails, roles) sem exigir token
+  // era uma exposição de dados real — só o cadastro (POST) e a validação de
+  // credenciais (POST /validar) precisam ficar abertos sem autenticação.
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Lista todos os usuários (sem o campo senha)' })
   @ApiResponse({ status: 200, description: 'Lista de usuários.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Token ausente, inválido ou expirado.',
+  })
   findAll() {
     return this.usuariosService.findAll();
   }
 
   // GET /usuarios/:id
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Busca um usuário pelo ID (sem o campo senha)' })
   @ApiResponse({ status: 200, description: 'Usuário encontrado.' })
   @ApiResponse({ status: 400, description: 'ID em formato inválido.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Token ausente, inválido ou expirado.',
+  })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   buscarPorId(@Param('id') id: string) {
     return this.usuariosService.findOne(id);
   }
 
   // PATCH /usuarios/:id
+  // Corrigido: antes permitia editar QUALQUER usuário, de qualquer ID, sem
+  // token — um vetor de escrita não autenticado real.
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary:
       'Atualiza parcialmente um usuário (recriptografa a senha só se ela mudar)',
   })
   @ApiResponse({ status: 200, description: 'Usuário atualizado com sucesso.' })
   @ApiResponse({ status: 400, description: 'ID ou dados inválidos.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Token ausente, inválido ou expirado.',
+  })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   @ApiResponse({
     status: 409,
