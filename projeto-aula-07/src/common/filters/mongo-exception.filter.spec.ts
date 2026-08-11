@@ -1,17 +1,25 @@
 import { ArgumentsHost, HttpStatus, Logger } from '@nestjs/common';
-import type { Response } from 'express';
 import { Error as MongooseError } from 'mongoose';
 import { MongoNetworkError, MongoServerError } from 'mongodb';
 import { MongoExceptionFilter } from './mongo-exception.filter';
 
-function criarResponseMock(): Response {
-  const res = {} as Response;
+// Tipado como um objeto próprio (não Response do Express) para evitar o
+// falso positivo do @typescript-eslint/unbound-method em
+// expect(res.status)... adiante — a regra só dispara quando a propriedade
+// vem de uma assinatura de método, não de uma propriedade de tipo função.
+interface RespostaMock {
+  status: jest.Mock;
+  json: jest.Mock;
+}
+
+function criarResponseMock(): RespostaMock {
+  const res = {} as RespostaMock;
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
   return res;
 }
 
-function criarHostMock(response: Response): ArgumentsHost {
+function criarHostMock(response: RespostaMock): ArgumentsHost {
   return {
     switchToHttp: () => ({
       getResponse: () => response,

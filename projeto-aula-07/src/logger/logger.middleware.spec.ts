@@ -5,8 +5,18 @@ function criarRequestMock(path: string, headers: Record<string, string> = {}): R
   return { method: 'GET', originalUrl: path, path, headers } as unknown as Request;
 }
 
-function criarResponseMock(): Response {
-  const res = {} as Response;
+// Tipado como um objeto próprio (não Response): status/json aqui são
+// propriedades de tipo função (jest.Mock), não assinaturas de método —
+// é isso que evita o falso positivo do @typescript-eslint/unbound-method
+// ao fazer expect(res.status)... adiante (a regra só dispara quando a
+// propriedade vem de um método tipado com possível dependência de `this`).
+interface RespostaMock {
+  status: jest.Mock;
+  json: jest.Mock;
+}
+
+function criarResponseMock(): RespostaMock {
+  const res = {} as RespostaMock;
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
   return res;
@@ -29,7 +39,7 @@ describe('LoggerMiddleware', () => {
     const req = criarRequestMock('/convidados');
     const res = criarResponseMock();
 
-    middleware.use(req, res, next);
+    middleware.use(req, res as unknown as Response, next);
 
     expect(next).toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();
@@ -39,7 +49,7 @@ describe('LoggerMiddleware', () => {
     const req = criarRequestMock('/admin');
     const res = criarResponseMock();
 
-    middleware.use(req, res, next);
+    middleware.use(req, res as unknown as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
     expect(res.json).toHaveBeenCalledWith({ message: 'Acesso Negado' });
@@ -50,7 +60,7 @@ describe('LoggerMiddleware', () => {
     const req = criarRequestMock('/admin', { 'x-user-role': 'estagiario' });
     const res = criarResponseMock();
 
-    middleware.use(req, res, next);
+    middleware.use(req, res as unknown as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
     expect(next).not.toHaveBeenCalled();
@@ -60,7 +70,7 @@ describe('LoggerMiddleware', () => {
     const req = criarRequestMock('/admin', { 'x-user-role': 'supervisor' });
     const res = criarResponseMock();
 
-    middleware.use(req, res, next);
+    middleware.use(req, res as unknown as Response, next);
 
     expect(next).toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();

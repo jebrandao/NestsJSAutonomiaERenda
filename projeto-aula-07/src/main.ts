@@ -58,4 +58,8 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+
+bootstrap().catch((error: unknown) => {
+  console.error('Erro ao iniciar a aplicação:', error);
+  process.exitCode = 1;
+});

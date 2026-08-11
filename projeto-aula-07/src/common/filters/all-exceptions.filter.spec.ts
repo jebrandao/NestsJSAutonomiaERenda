@@ -4,17 +4,25 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Response } from 'express';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
-function criarResponseMock(): Response {
-  const res = {} as Response;
+// Tipado como um objeto próprio (não Response do Express) para evitar o
+// falso positivo do @typescript-eslint/unbound-method em
+// expect(res.status)... adiante — ver o mesmo padrão em
+// mongo-exception.filter.spec.ts.
+interface RespostaMock {
+  status: jest.Mock;
+  json: jest.Mock;
+}
+
+function criarResponseMock(): RespostaMock {
+  const res = {} as RespostaMock;
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
   return res;
 }
 
-function criarHostMock(response: Response): ArgumentsHost {
+function criarHostMock(response: RespostaMock): ArgumentsHost {
   return {
     switchToHttp: () => ({
       getResponse: () => response,

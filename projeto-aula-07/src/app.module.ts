@@ -58,7 +58,7 @@ import { StatusController } from './status/status.controller';
     // mongoose.connect() manual chamado antes diretamente em main.ts).
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('DATABASE_URL'),
         // Sem isso, cada tentativa demora até 30s (padrão do driver) e o
         // @nestjs/mongoose ainda tenta de novo 9 vezes por padrão — o erro
